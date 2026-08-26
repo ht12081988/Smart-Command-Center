@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FBF9F6;
+  --foreground: #262626;
+
+  --sidebar-background: #141311;
+  --sidebar-foreground: #8A8A8A;
+  --sidebar-active: #B58E58;
+  
+  --primary-gold: #B58E58;
+  --primary-gold-hover: #A27E4E;
+  --primary-gold-muted: rgba(181, 142, 88, 0.12);
+  
+  --border-warm: #E5E2DA;
+  --card-background: #FFFFFF;
+  
+  --active-green: #2E7D32;
+  --alert-orange: #D35400;
+  --active-cyan: #00D2C4;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-sidebar-bg: var(--sidebar-background);
+  --color-sidebar-fg: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+
+  --color-gold: var(--primary-gold);
+  --color-gold-hover: var(--primary-gold-hover);
+  --color-gold-muted: var(--primary-gold-muted);
+
+  --color-border-warm: var(--border-warm);
+  --color-card: var(--card-background);
+
+  --color-active-green: var(--active-green);
+  --color-alert-orange: var(--alert-orange);
+  --color-active-cyan: var(--active-cyan);
+  
+  --font-sans: 'Outfit', sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
