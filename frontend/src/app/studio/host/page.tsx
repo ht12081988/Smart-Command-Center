@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
 import { useBroadcast } from "../../../context/BroadcastContext";
 
 export default function HostStudioPage() {
@@ -34,53 +35,50 @@ export default function HostStudioPage() {
   }, [ytComments]);
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       
       {/* 1. Left Sidebar */}
       <Sidebar activeItem="Live Studio Feed" />
 
-      {/* 2. Main Broadcast Console */}
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
-        
-        {/* Header Indicator Bar */}
-        <header className="flex justify-between items-center border-b border-border-warm pb-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
-              Smart Studio Broadcast Monitor
-            </h1>
-            
-            {/* Active Source Badge */}
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-              activeSource === "HotLine" ? "bg-amber-100 text-amber-800 border border-amber-200" :
-              activeSource === "YouTubeLive" ? "bg-red-100 text-red-800 border border-red-200" :
-              "bg-blue-100 text-blue-800 border border-blue-200"
-            }`}>
-              {activeSource === "HotLine" && "📞 Active HotLine"}
-              {activeSource === "YouTubeLive" && "🔴 YouTube Live Monitoring"}
-              {activeSource === "LiveTV" && "📺 Live TV Ingestion"}
-              {activeSource === "RadioAoIP" && "📻 Radio AoIP Stream"}
-            </span>
-          </div>
-
-          {/* Right Header Status Controls */}
-          <div className="flex items-center gap-4">
-            {/* Live STT Confidence Score */}
-            {isLive && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-gold-muted border border-gold/15 rounded-lg text-xs font-semibold">
-                <span className="text-foreground/50 uppercase text-[9px] font-bold">STT Confidence:</span>
-                <span className="text-primary-text-gold font-bold">{sttConfidence}%</span>
-              </div>
-            )}
-
-            {/* On-Air Blinking Status */}
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${isLive ? "bg-red-600 animate-pulse" : "bg-foreground/20"}`}></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground/60">
-                {isLive ? "ON AIR" : "STANDBY"}
+      {/* 2. Main Broadcast Console Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Smart Studio Broadcast Monitor"
+          subtitle="Live on-air transcript monitoring, speech-to-text feed, and interactive studio controls."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          }
+          actions={
+            <div className="flex items-center gap-3">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                activeSource === "HotLine" ? "bg-amber-100 text-amber-800 border border-amber-200" :
+                activeSource === "YouTubeLive" ? "bg-red-100 text-red-800 border border-red-200" :
+                "bg-blue-100 text-blue-800 border border-blue-200"
+              }`}>
+                {activeSource === "HotLine" && "📞 Active HotLine"}
+                {activeSource === "YouTubeLive" && "🔴 YouTube Live"}
+                {activeSource === "LiveTV" && "📺 Live TV Ingestion"}
+                {activeSource === "RadioAoIP" && "📻 Radio AoIP Stream"}
               </span>
+              {isLive && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-gold-muted border border-gold/15 rounded-lg text-xs font-semibold">
+                  <span className="text-foreground/50 uppercase text-[9px] font-bold">STT:</span>
+                  <span className="text-primary-text-gold font-bold">{sttConfidence}%</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 px-2.5 py-1 bg-card border border-border-warm rounded-lg">
+                <span className={`w-2.5 h-2.5 rounded-full ${isLive ? "bg-red-600 animate-pulse" : "bg-foreground/20"}`}></span>
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground/70">
+                  {isLive ? "ON AIR" : "STANDBY"}
+                </span>
+              </div>
             </div>
-          </div>
-        </header>
+          }
+        />
+
+        <main className="flex-1 p-6 md:p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
 
         {/* Console layout */}
         <div className="flex-1 grid grid-cols-3 gap-6 overflow-hidden">
@@ -342,7 +340,9 @@ export default function HostStudioPage() {
 
         </div>
       </main>
-
     </div>
-  );
+  </div>
+);
 }
+
+

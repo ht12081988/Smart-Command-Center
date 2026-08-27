@@ -1,40 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Sidebar } from "../../components/Sidebar";
+import { PortalHeader } from "../../components/PortalHeader";
 import { ExecutiveNav } from "../../components/ExecutiveNav";
 import { MOCK_CASES } from "../cases/page";
 import { MOCK_DIRECTIVES } from "../directives/page";
 
-// ─── Analytics helpers ────────────────────────────────────────────────────────
+// ─── Analytics constants ──────────────────────────────────────────────────────
 const ACTIVE_STATUSES = ["New", "Under Review", "Assigned", "In Progress", "Escalated", "Awaiting Citizen", "Reopened"];
-
-const openCases    = MOCK_CASES.filter(c => ACTIVE_STATUSES.includes(c.status));
-const urgentCases  = MOCK_CASES.filter(c => c.priority === "Critical" || c.priority === "High");
-const overdueCases = MOCK_CASES.filter(c => c.slaHours !== undefined && c.slaHours < 0);
-const resolvedLast30 = MOCK_CASES.filter(c => c.status === "Resolved" || c.status === "Closed");
-
-const categoryCount: Record<string, number> = {};
-MOCK_CASES.forEach(c => {
-  categoryCount[c.primaryClassification] = (categoryCount[c.primaryClassification] || 0) + 1;
-});
-const topCategory = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-
-// Monthly trend data (Jan–Aug 2026)
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
 const MONTH_MAP: Record<string, number> = { "01": 0, "02": 1, "03": 2, "04": 3, "05": 4, "06": 5, "07": 6, "08": 7 };
-const monthlyData = MONTHS.map(() => 0);
-MOCK_CASES.forEach(c => {
-  if (c.createdAt) {
-    const m = c.createdAt.split("-")[1];
-    if (m && MONTH_MAP[m] !== undefined) monthlyData[MONTH_MAP[m]]++;
-  }
-});
-const maxMonthly = Math.max(...monthlyData, 1);
 
-// Category distribution
+// Category distribution colors
 const CATEGORY_COLORS: Record<string, string> = {
   "Housing":             "bg-blue-500",
   "Health & Medical":    "bg-red-500",
@@ -69,32 +50,99 @@ function KpiCard({ label, value, sub, gradient, icon }: {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function ExecutiveDashboardPage() {
+function ExecutiveDashboardContent() {
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
 
+  const searchParams = useSearchParams();
+  const dateFilter = searchParams.get("filter") || "Last Month";
+  const customStart = searchParams.get("start") || "2026-08-01";
+  const customEnd = searchParams.get("end") || "2026-08-27";
+
+  // Helper to filter items dynamically based on selected date filter
+  const filterByDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    // Extract date portion: YYYY-MM-DD
+    const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+    const itemDate = new Date(datePart);
+    const targetDate = new Date("2026-08-27"); // Current reference context date
+
+    switch (dateFilter) {
+      case "Today":
+        return datePart === "2026-08-27";
+      case "Yesterday":
+        return datePart === "2026-08-26";
+      case "Last Week": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 7;
+      }
+      case "Last Month": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 30;
+      }
+      case "Last 90 Days": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 90;
+      }
+      case "Date Range": {
+        if (!customStart || !customEnd) return true;
+        const start = new Date(customStart);
+        const end = new Date(customEnd);
+        return itemDate >= start && itemDate <= end;
+      }
+      default:
+        return true;
+    }
+  };
+
+  // Perform dynamic filtering of Cases and Directives
+  const filteredCases = MOCK_CASES.filter(c => filterByDate(c.createdAt));
+  const filteredDirectives = MOCK_DIRECTIVES.filter(d => filterByDate(d.createdAt));
+
+  // Compute reactive states
+  const openCases = filteredCases.filter(c => ACTIVE_STATUSES.includes(c.status));
+  const urgentCases = filteredCases.filter(c => c.priority === "Critical" || c.priority === "High");
+  const overdueCases = filteredCases.filter(c => c.slaHours !== undefined && c.slaHours < 0);
+  const resolvedLast30 = filteredCases.filter(c => c.status === "Resolved" || c.status === "Closed");
+
+  const categoryCount: Record<string, number> = {};
+  filteredCases.forEach(c => {
+    categoryCount[c.primaryClassification] = (categoryCount[c.primaryClassification] || 0) + 1;
+  });
+  const topCategory = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+
+  // Recalculate monthly trend data (always use MOCK_CASES so full year is visible in the trend chart)
+  const monthlyData = MONTHS.map(() => 0);
+  MOCK_CASES.forEach(c => {
+    if (c.createdAt) {
+      const m = c.createdAt.split("-")[1];
+      if (m && MONTH_MAP[m] !== undefined) monthlyData[MONTH_MAP[m]]++;
+    }
+  });
+  const maxMonthly = Math.max(...monthlyData, 1);
+
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans selection:bg-gold/30">
+    <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans selection:bg-gold/30">
       <Sidebar activeItem="Executive Command Center" />
 
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        {/* Page Header */}
-        <header className="shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border-warm px-8 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-                <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Executive Command Center
-              </h1>
-              <p className="text-sm text-foreground/60 mt-1">Strategic intelligence hub for SBA leadership — real-time humanitarian case visibility.</p>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-card border border-border-warm rounded-xl text-xs text-foreground/60">
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Executive Command Center"
+          subtitle="Strategic intelligence hub for SBA leadership - real-time humanitarian case visibility."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          }
+          actions={
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border-warm rounded-full text-[10px] uppercase tracking-wider text-foreground/60">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Live — {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              Live - {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
             </div>
-          </div>
-        </header>
+          }
+        />
 
         {/* Tab Nav */}
         <ExecutiveNav />
@@ -153,11 +201,11 @@ export default function ExecutiveDashboardPage() {
               gradient="bg-gradient-to-br from-card to-background border-border-warm text-foreground"
               icon={<svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
             />
-            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/20 rounded-2xl p-5 relative overflow-hidden">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-purple-300 mb-1">🔮 AI Emerging Signal</p>
-              <p className="text-sm font-bold text-white">Rise in Housing Denials</p>
-              <p className="text-[10px] text-purple-300/70 mt-1">3 clustered cases in Al Dhaid — 90 days</p>
-              <Link href="/executive/signals" className="mt-2 inline-block text-[10px] font-bold text-purple-400 uppercase tracking-widest hover:text-purple-200 transition-colors">
+            <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/20 border border-purple-500/30 rounded-2xl p-5 relative overflow-hidden">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-purple-700 dark:text-purple-300 mb-1">🔮 AI Emerging Signal</p>
+              <p className="text-sm font-black text-purple-950 dark:text-white">Rise in Housing Denials</p>
+              <p className="text-[10px] text-purple-800/80 dark:text-purple-300/70 mt-1 font-medium">3 clustered cases in Al Dhaid — 90 days</p>
+              <Link href="/executive/signals" className="mt-2 inline-block text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest hover:text-purple-800 transition-colors">
                 View Signals →
               </Link>
             </div>
@@ -168,7 +216,7 @@ export default function ExecutiveDashboardPage() {
 
             {/* Monthly Trend Bar Chart */}
             <div className="col-span-2 bg-card border border-border-warm rounded-2xl p-6 shadow-sm">
-              <h3 className="text-xs font-bold text-foreground/60 uppercase tracking-widest mb-5">Cases Intake — Monthly Trend (2026)</h3>
+              <h3 className="text-xs font-bold text-foreground/60 uppercase tracking-widest mb-5">Cases Intake — Trend (2026)</h3>
               <div className="flex items-end gap-2 h-36">
                 {MONTHS.map((month, i) => {
                   const val = monthlyData[i];
@@ -318,5 +366,13 @@ export default function ExecutiveDashboardPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function ExecutiveDashboardPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background text-foreground">Loading Executive Dashboard...</div>}>
+      <ExecutiveDashboardContent />
+    </Suspense>
   );
 }

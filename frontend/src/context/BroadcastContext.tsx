@@ -50,6 +50,7 @@ interface BroadcastContextType {
   callerQueue: ScreenerTicket[];
   activeCaller: ScreenerTicket | null;
   addCallerToQueue: (ticket: Omit<ScreenerTicket, "id">) => void;
+  removeFromQueue: (id: string) => void;
   goOnAir: (ticket: ScreenerTicket) => void;
   goOnAirStream: () => void;
   endCall: () => void;
@@ -204,6 +205,10 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: "caller-" + Date.now()
     };
     setCallerQueue((prev) => [...prev, newTicket]);
+  };
+
+  const removeFromQueue = (id: string) => {
+    setCallerQueue((prev) => prev.filter((c) => c.id !== id));
   };
 
   // Simulate Hot Line call transcription
@@ -400,6 +405,7 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         callerQueue,
         activeCaller,
         addCallerToQueue,
+        removeFromQueue,
         goOnAir,
         goOnAirStream,
         endCall,

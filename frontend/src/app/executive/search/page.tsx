@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Sidebar } from "../../../components/Sidebar";
-import { ExecutiveNav } from "../../../components/ExecutiveNav";
+import { PortalHeader } from "../../../components/PortalHeader";
+import { Pagination } from "../../../components/Pagination";
 import { MOCK_CASES, Case } from "../../cases/page";
 
 // ─── NL Search logic ─────────────────────────────────────────────────────────
@@ -72,30 +73,35 @@ export default function SmartSearchPage() {
   const [results, setResults] = useState<Case[]>([]);
   const [searched, setSearched] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
   const handleSearch = (q: string) => {
     const q2 = q.trim();
     if (!q2) return;
     setSubmitted(q2);
     setResults(searchCases(q2));
     setSearched(true);
+    setCurrentPage(1);
   };
 
-  return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans selection:bg-gold/30">
-      <Sidebar activeItem="Executive Command Center" />
+  const totalPages = Math.ceil(results.length / pageSize) || 1;
+  const paginatedResults = results.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        <header className="shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border-warm px-8 py-5">
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-            <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  return (
+    <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans selection:bg-gold/30">
+      <Sidebar activeItem="Smart Search" />
+
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Smart Natural Language Search"
+          subtitle="Query the case database using plain language - no filters needed."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            Smart Natural Language Search
-          </h1>
-          <p className="text-sm text-foreground/60 mt-1">Query the case database using plain language — no filters needed.</p>
-        </header>
-
-        <ExecutiveNav />
+          }
+        />
 
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
 
@@ -178,55 +184,68 @@ export default function SmartSearchPage() {
                     <p className="text-xs text-foreground/30 mt-1">Try different keywords like "housing", "medical", "overdue".</p>
                   </div>
                 ) : (
-                  results.map((c, i) => (
-                    <motion.div
-                      key={c.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <Link
-                        href={`/cases?id=${c.id}`}
-                        className="block p-4 bg-card border border-border-warm hover:border-gold/50 rounded-2xl transition-all hover:shadow-md hover:shadow-gold/5 group"
+                  <>
+                    {paginatedResults.map((c, i) => (
+                      <motion.div
+                        key={c.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[11px] font-black text-gold">{c.id}</span>
-                              <span className="text-[10px] text-foreground/40">·</span>
-                              <span className="text-[10px] text-foreground/50 font-medium">{c.citizenName}</span>
-                              {c.region && (
-                                <>
-                                  <span className="text-[10px] text-foreground/40">·</span>
-                                  <span className="text-[10px] text-foreground/50">{c.region}</span>
-                                </>
+                        <Link
+                          href={`/cases?id=${c.id}`}
+                          className="block p-4 bg-card border border-border-warm hover:border-gold/50 rounded-2xl transition-all hover:shadow-md hover:shadow-gold/5 group"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[11px] font-black text-gold">{c.id}</span>
+                                <span className="text-[10px] text-foreground/40">·</span>
+                                <span className="text-[10px] text-foreground/50 font-medium">{c.citizenName}</span>
+                                {c.region && (
+                                  <>
+                                    <span className="text-[10px] text-foreground/40">·</span>
+                                    <span className="text-[10px] text-foreground/50">{c.region}</span>
+                                  </>
+                                )}
+                              </div>
+                              <p className="text-sm font-medium text-foreground group-hover:text-gold transition-colors line-clamp-2">{c.summary}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-[9px] font-bold text-foreground/50 bg-foreground/5 border border-border-warm px-2 py-0.5 rounded-full">
+                                  {c.primaryClassification}
+                                </span>
+                                <span className="text-[9px] font-bold text-foreground/50 bg-foreground/5 border border-border-warm px-2 py-0.5 rounded-full">
+                                  {c.externalEntity}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${STATUS_BADGE[c.status] ?? "text-foreground/40 bg-foreground/5 border-border-warm"}`}>
+                                {c.status}
+                              </span>
+                              {c.slaHours !== undefined && c.slaHours < 0 && (
+                                <span className="text-[9px] font-bold text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">SLA BREACHED</span>
                               )}
-                            </div>
-                            <p className="text-sm font-medium text-foreground group-hover:text-gold transition-colors line-clamp-2">{c.summary}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-[9px] font-bold text-foreground/50 bg-foreground/5 border border-border-warm px-2 py-0.5 rounded-full">
-                                {c.primaryClassification}
-                              </span>
-                              <span className="text-[9px] font-bold text-foreground/50 bg-foreground/5 border border-border-warm px-2 py-0.5 rounded-full">
-                                {c.externalEntity}
-                              </span>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                c.priority === "Critical" ? "text-red-500" : c.priority === "High" ? "text-orange-500" : "text-foreground/30"
+                              }`}>{c.priority}</span>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${STATUS_BADGE[c.status] ?? "text-foreground/40 bg-foreground/5 border-border-warm"}`}>
-                              {c.status}
-                            </span>
-                            {c.slaHours !== undefined && c.slaHours < 0 && (
-                              <span className="text-[9px] font-bold text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">SLA BREACHED</span>
-                            )}
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                              c.priority === "Critical" ? "text-red-500" : c.priority === "High" ? "text-orange-500" : "text-foreground/30"
-                            }`}>{c.priority}</span>
-                          </div>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  ))
+                        </Link>
+                      </motion.div>
+                    ))}
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={results.length}
+                      pageSize={pageSize}
+                      onPageChange={setCurrentPage}
+                      onPageSizeChange={(newSize) => {
+                        setPageSize(newSize);
+                        setCurrentPage(1);
+                      }}
+                    />
+                  </>
                 )}
               </motion.div>
             )}

@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "../../components/Sidebar";
+import { PortalHeader } from "../../components/PortalHeader";
+import { Pagination } from "../../components/Pagination";
 
 interface CitizenCase {
   id: string;
@@ -125,6 +127,17 @@ export default function CitizenProfilePage() {
     return matchesSearch && matchesRegion;
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, regionFilter]);
+
+  const totalPages = Math.ceil(filteredCitizens.length / pageSize) || 1;
+  const paginatedCitizens = filteredCitizens.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const eidRegex = /^784-\d{4}-\d{7}-\d{1}$/;
@@ -153,26 +166,29 @@ export default function CitizenProfilePage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       <Sidebar activeItem="Citizen Profiles" />
 
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-        <header className="border-b border-border-warm pb-5 flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-              Citizen Profiles CRM
-            </h1>
-            <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-              Manage identities, track duplicate callers, and review case history to avoid redundant work.
-            </p>
-          </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
-          >
-            + Add Citizen
-          </button>
-        </header>
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Citizen Profiles CRM"
+          subtitle="Manage identities, track duplicate callers, and review case history to avoid redundant work."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          }
+          actions={
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
+            >
+              + Add Citizen
+            </button>
+          }
+        />
+
+        <main className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* Filters */}
         <section className="flex gap-4 items-center">
@@ -206,8 +222,9 @@ export default function CitizenProfilePage() {
         </section>
 
         {/* Main Table List */}
-        <section className="bg-card border border-border-warm rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)] animate-in fade-in duration-200">
-          <table className="w-full border-collapse text-left text-sm">
+        <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col animate-in fade-in duration-200">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border-warm bg-background/50 text-foreground/50 font-semibold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Citizen Identity</th>
@@ -218,7 +235,7 @@ export default function CitizenProfilePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-warm">
-              {filteredCitizens.map((c) => (
+              {paginatedCitizens.map((c) => (
                 <tr key={c.id} className="hover:bg-background/25 transition-colors group">
                   <td className="py-4 px-6">
                     <span className="font-bold text-primary-text-gold block">{c.fullName}</span>
@@ -260,6 +277,18 @@ export default function CitizenProfilePage() {
               ))}
             </tbody>
           </table>
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredCitizens.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </section>
       </main>
 
@@ -324,9 +353,13 @@ export default function CitizenProfilePage() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }
+
+
+
 
 function DetailWorkspace({ citizen, onClose }: { citizen: Citizen, onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<"history" | "engagements" | "documents">("history");
@@ -664,7 +697,8 @@ function DetailWorkspace({ citizen, onClose }: { citizen: Citizen, onClose: () =
           </div>
         </>
       )}
-
     </div>
   );
 }
+
+

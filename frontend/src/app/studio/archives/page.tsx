@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
+import { Pagination } from "../../../components/Pagination";
 import { useRouter } from "next/navigation";
 
 export interface ArchiveSession {
@@ -150,6 +152,10 @@ export default function ArchivesPage() {
   // Detail Drawer state
   const [selectedSession, setSelectedSession] = useState<ArchiveSession | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+
   const filteredSessions = sessions.filter(s => {
     const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.linkedCases.some(c => c.citizen.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -159,27 +165,35 @@ export default function ArchivesPage() {
     return matchesSearch && matchesSource;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sourceFilter]);
+
+  const totalPages = Math.ceil(filteredSessions.length / pageSize) || 1;
+  const paginatedSessions = filteredSessions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       
       {/* 1. Left Sidebar */}
       <Sidebar activeItem="Broadcast Archives" />
 
-      {/* 2. Main content area */}
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-        
-        {/* Header */}
-        <header className="border-b border-border-warm pb-5">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-            Past Broadcast Archives
-          </h1>
-          <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-            Review recorded television, radio, and YouTube streams, audit transcript text, and inspect case ingestion history
-          </p>
-        </header>
+      {/* 2. Main content area wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Past Broadcast Archives"
+          subtitle="Review recorded television, radio, and YouTube streams, audit transcript text, and inspect case ingestion history."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          }
+        />
+
+        <main className="flex-1 min-h-0 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* Filter Bar */}
-        <section className="flex gap-4 items-center">
+        <section className="flex gap-4 items-center shrink-0">
           <div className="flex-1 relative">
             <input
               type="text"
@@ -236,132 +250,160 @@ export default function ArchivesPage() {
         {/* 3. Conditional Layout Views */}
         {viewMode === "card" ? (
           /* Grid Card View (Default) */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSessions.map((session) => (
-              <div 
-                key={session.id}
-                className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
-              >
-                <div>
-                  {/* Thumbnail / Waveform Placeholder */}
-                  <div className="relative h-44 bg-black flex items-center justify-center border-b border-border-warm">
-                    {session.source === "YouTubeLive" || session.source === "LiveTV" ? (
-                      /* Video placeholder */
-                      <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
-                        <span className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
-                          <svg className="w-6 h-6 fill-current pl-1" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </span>
-                      </div>
-                    ) : (
-                      /* Audio waveform placeholder */
-                      <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
-                        <span className="w-12 h-12 rounded-full bg-amber-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                          </svg>
-                        </span>
-                      </div>
-                    )}
-                    {/* Badge source */}
-                    <span className={`absolute top-4 left-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm z-10 ${
-                      session.source === "YouTubeLive" ? "bg-red-600 text-white border border-red-700" :
-                      session.source === "LiveTV" ? "bg-blue-600 text-white border border-blue-700" :
-                      session.source === "RadioAoIP" ? "bg-amber-600 text-white border border-amber-700" :
-                      "bg-green-600 text-white border border-green-700"
-                    }`}>
-                      {session.source.replace("Live", " Live").replace("TV", " TV").replace("AoIP", " AoIP").replace("HotLine", " Hotline")}
-                    </span>
-                  </div>
-
-                  {/* Card Content Info */}
-                  <div className="p-5 flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
-                      <span>{session.date}</span>
-                      <span>{session.duration}</span>
-                    </div>
-                    <h3 className="font-bold text-primary-text-gold text-sm group-hover:text-gold transition-colors line-clamp-2">
-                      {session.title}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Card Footer Actions */}
-                <div className="p-5 pt-0 flex justify-between items-center border-t border-border-warm/40 mt-3">
-                  <div className="flex gap-2.5 text-[10px] font-bold text-foreground/50">
-                    <span className="flex items-center gap-1">
-                      <span className={`w-1.5 h-1.5 rounded-full ${session.directivesCount > 0 ? "bg-red-600" : "bg-foreground/20"}`}></span>
-                      {session.directivesCount} DIRECTIVES
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-foreground/20"></span>
-                      {session.casesCount} CASES
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedSession(session)}
-                    className="bg-gold hover:bg-gold-hover text-white px-3.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-xs transition-colors"
-                  >
-                    Review
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Table List View */
-          <section className="bg-card border border-border-warm rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)] animate-in fade-in duration-200">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-border-warm bg-background/50 text-foreground/50 font-semibold text-xs uppercase tracking-wider">
-                  <th className="py-4 px-6">Episode / Session Title</th>
-                  <th className="py-4 px-6">Source Feed</th>
-                  <th className="py-4 px-6">Broadcast Date</th>
-                  <th className="py-4 px-6">Duration</th>
-                  <th className="py-4 px-6">Directives</th>
-                  <th className="py-4 px-6">Cases Created</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-warm">
-                {filteredSessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-background/25 transition-colors">
-                    <td className="py-4 px-6">
-                      <span className="font-bold text-primary-text-gold block">{session.title}</span>
-                      <span className="text-xs text-foreground/40 font-medium">Session ID: #{session.id}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        session.source === "YouTubeLive" ? "bg-red-50 text-red-700 border border-red-200" :
-                        session.source === "LiveTV" ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                        session.source === "RadioAoIP" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                        "bg-green-50 text-green-700 border border-green-200"
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedSessions.map((session) => (
+                <div 
+                  key={session.id}
+                  className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Thumbnail / Waveform Placeholder */}
+                    <div className="relative h-44 bg-black flex items-center justify-center border-b border-border-warm">
+                      {session.source === "YouTubeLive" || session.source === "LiveTV" ? (
+                        /* Video placeholder */
+                        <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
+                          <span className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                            <svg className="w-6 h-6 fill-current pl-1" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </span>
+                        </div>
+                      ) : (
+                        /* Audio waveform placeholder */
+                        <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
+                          <span className="w-12 h-12 rounded-full bg-amber-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                          </span>
+                        </div>
+                      )}
+                      {/* Badge source */}
+                      <span className={`absolute top-4 left-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm z-10 ${
+                        session.source === "YouTubeLive" ? "bg-red-600 text-white border border-red-700" :
+                        session.source === "LiveTV" ? "bg-blue-600 text-white border border-blue-700" :
+                        session.source === "RadioAoIP" ? "bg-amber-600 text-white border border-amber-700" :
+                        "bg-green-600 text-white border border-green-700"
                       }`}>
                         {session.source.replace("Live", " Live").replace("TV", " TV").replace("AoIP", " AoIP").replace("HotLine", " Hotline")}
                       </span>
-                    </td>
-                    <td className="py-4 px-6 text-foreground/80">{session.date}</td>
-                    <td className="py-4 px-6 text-foreground/80">{session.duration}</td>
-                    <td className="py-4 px-6 text-center">
-                      <span className={`font-semibold ${session.directivesCount > 0 ? "text-red-600 font-bold" : "text-foreground/40"}`}>
-                        {session.directivesCount}
+                    </div>
+
+                    {/* Card Content Info */}
+                    <div className="p-5 flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
+                        <span>{session.date}</span>
+                        <span>{session.duration}</span>
+                      </div>
+                      <h3 className="font-bold text-primary-text-gold text-sm group-hover:text-gold transition-colors line-clamp-2">
+                        {session.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* Card Footer Actions */}
+                  <div className="p-5 pt-0 flex justify-between items-center border-t border-border-warm/40 mt-3">
+                    <div className="flex gap-2.5 text-[10px] font-bold text-foreground/50">
+                      <span className="flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${session.directivesCount > 0 ? "bg-red-600" : "bg-foreground/20"}`}></span>
+                        {session.directivesCount} DIRECTIVES
                       </span>
-                    </td>
-                    <td className="py-4 px-6 text-center font-semibold text-foreground/80">{session.casesCount}</td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => setSelectedSession(session)}
-                        className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
-                      >
-                        Review Session
-                      </button>
-                    </td>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/20"></span>
+                        {session.casesCount} CASES
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedSession(session)}
+                      className="bg-gold hover:bg-gold-hover text-white px-3.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-xs transition-colors"
+                    >
+                      Review
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredSessions.length}
+              pageSize={pageSize}
+              pageSizeOptions={[6, 12, 24]}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        ) : (
+          /* Table List View */
+          <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)] animate-in fade-in duration-200">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-warm bg-background/50 text-foreground/50 font-semibold text-xs uppercase tracking-wider">
+                    <th className="py-4 px-6">Episode / Session Title</th>
+                    <th className="py-4 px-6">Source Feed</th>
+                    <th className="py-4 px-6">Broadcast Date</th>
+                    <th className="py-4 px-6">Duration</th>
+                    <th className="py-4 px-6">Directives</th>
+                    <th className="py-4 px-6">Cases Created</th>
+                    <th className="py-4 px-6 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border-warm">
+                  {paginatedSessions.map((session) => (
+                    <tr key={session.id} className="hover:bg-background/25 transition-colors">
+                      <td className="py-4 px-6">
+                        <span className="font-bold text-primary-text-gold block">{session.title}</span>
+                        <span className="text-xs text-foreground/40 font-medium">Session ID: #{session.id}</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          session.source === "YouTubeLive" ? "bg-red-50 text-red-700 border border-red-200" :
+                          session.source === "LiveTV" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                          session.source === "RadioAoIP" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                          "bg-green-50 text-green-700 border border-green-200"
+                        }`}>
+                          {session.source.replace("Live", " Live").replace("TV", " TV").replace("AoIP", " AoIP").replace("HotLine", " Hotline")}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-foreground/80">{session.date}</td>
+                      <td className="py-4 px-6 text-foreground/80">{session.duration}</td>
+                      <td className="py-4 px-6 text-center">
+                        <span className={`font-semibold ${session.directivesCount > 0 ? "text-red-600 font-bold" : "text-foreground/40"}`}>
+                          {session.directivesCount}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-center font-semibold text-foreground/80">{session.casesCount}</td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => setSelectedSession(session)}
+                          className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+                        >
+                          Review Session
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredSessions.length}
+              pageSize={pageSize}
+              pageSizeOptions={[6, 12, 24]}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
           </section>
         )}
       </main>
@@ -374,6 +416,7 @@ export default function ArchivesPage() {
         />
       )}
 
+      </div>
     </div>
   );
 }
@@ -672,7 +715,7 @@ function DetailWorkspace({ session, onClose }: DetailWorkspaceProps) {
         </div>
 
       </div>
-
     </div>
   );
 }
+

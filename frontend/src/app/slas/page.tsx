@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "../../components/Sidebar";
+import { PortalHeader } from "../../components/PortalHeader";
+import { Pagination } from "../../components/Pagination";
 import { Case, CaseDetailWorkspace, MOCK_CASES } from "../cases/page";
 
 import { LogCommunicationDrawer, CommType, CommDirection, CommunicationLog, COMM_ICONS } from "../../components/LogCommunicationDrawer";
@@ -50,6 +52,17 @@ export default function ResolutionFollowUpPage() {
     .filter(c => filterLabel === "All" || getSlaStatus(c).label === filterLabel)
     .sort((a, b) => (a.slaHours ?? 999) - (b.slaHours ?? 999));
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterLabel]);
+
+  const totalPages = Math.ceil(filteredCases.length / pageSize) || 1;
+  const paginatedCases = filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleLogCommunication = (newLog: CommunicationLog) => {
     if (!logDrawerCase) return;
@@ -79,27 +92,22 @@ export default function ResolutionFollowUpPage() {
   const caseLogs = (caseId: string) => communications.filter(c => c.caseId === caseId);
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans selection:bg-gold/30">
+    <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans selection:bg-gold/30">
       <Sidebar activeItem="Resolution & Follow-up" />
 
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <header className="shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border-warm px-8 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
-              <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Resolution & Follow-up Center
-            </h1>
-            <p className="text-sm text-foreground/60 mt-1">
-              Track externally-assigned cases, log communications, and manage SLA escalations.
-            </p>
-          </div>
-        </header>
+        <PortalHeader
+          title="Resolution & Follow-up Center"
+          subtitle="Track externally-assigned cases, log communications, and manage SLA escalations."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
 
           {/* ── KPI Cards ─────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -163,7 +171,7 @@ export default function ResolutionFollowUpPage() {
           </div>
 
           {/* ── Master Table ──────────────────────────────────────────────── */}
-          <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+          <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-border-warm bg-foreground/[0.02] flex items-center justify-between">
               <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">Externally Assigned Cases</h2>
               <div className="flex gap-1.5">
@@ -207,7 +215,7 @@ export default function ResolutionFollowUpPage() {
                       </td>
                     </tr>
                   )}
-                  {filteredCases.map(c => {
+                  {paginatedCases.map(c => {
                     const sla      = getSlaStatus(c);
                     const logs     = caseLogs(c.id);
                     const isDone   = sla.label === "Completed";

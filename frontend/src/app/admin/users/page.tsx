@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth, UserSession, UserRole, MOCK_USERS } from "../../../context/AuthContext";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
+import { Pagination } from "../../../components/Pagination";
 import { useRouter } from "next/navigation";
 
 // List of initial users mapped from MOCK_USERS
@@ -47,7 +49,7 @@ export default function AdminUsersPage() {
   // Check if current user has Admin rights
   if (!user || user.role !== "Administrator") {
     return (
-      <div className="min-h-screen bg-background flex flex-col justify-center items-center p-6 text-center">
+      <div className="h-screen overflow-hidden bg-background flex flex-col justify-center items-center p-6 text-center">
         <div className="bg-card border border-border-warm rounded-2xl p-8 max-w-md shadow-sm">
           <div className="text-red-600 font-bold text-lg mb-2">Access Denied</div>
           <p className="text-sm text-foreground/75 mb-6">
@@ -143,32 +145,44 @@ export default function AdminUsersPage() {
     (u.department && u.department.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       
       {/* 1. Left Sidebar */}
       <Sidebar activeItem="User Access Directory" />
 
-      {/* 2. Main Content Area */}
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-        
-        {/* Top Title Bar */}
-        <header className="flex justify-between items-center border-b border-border-warm pb-5">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-              Admin Users
-            </h1>
-            <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-              Monitor and manage membership, staff credentials and system access permissions
-            </p>
-          </div>
-          <button 
-            onClick={openCreateDrawer}
-            className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-colors flex items-center gap-2"
-          >
-            <span>+</span> Create New User
-          </button>
-        </header>
+      {/* 2. Main Content Area Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="User Access & Identity Directory"
+          subtitle="Manage system user accounts, assigned roles, and department access."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          }
+          actions={
+            <button 
+              onClick={openCreateDrawer}
+              className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-colors flex items-center gap-2"
+            >
+              <span>+</span> Create New User
+            </button>
+          }
+        />
+
+        <main className="flex-1 min-h-0 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* Filter & Search Panel */}
         <section className="flex gap-4 items-center">
@@ -187,8 +201,9 @@ export default function AdminUsersPage() {
         </section>
 
         {/* Users Table List */}
-        <section className="bg-card border border-border-warm rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)]">
-          <table className="w-full border-collapse text-left text-sm">
+        <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border-warm bg-background/50 text-foreground/50 font-semibold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Name / Username</th>
@@ -202,7 +217,7 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-warm">
-              {filteredUsers.map((u, idx) => (
+              {paginatedUsers.map((u, idx) => (
                 <tr key={idx} className="hover:bg-background/25 transition-colors">
                   <td className="py-4 px-6">
                     <span className="font-bold text-primary-text-gold block">{u.fullName}</span>
@@ -270,6 +285,18 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredUsers.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </section>
       </main>
 
@@ -467,6 +494,11 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }
+
+
+
+

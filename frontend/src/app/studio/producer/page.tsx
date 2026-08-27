@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
 import { useBroadcast, BroadcastSource, ScreenerTicket } from "../../../context/BroadcastContext";
 
 const DEPARTMENTS = [
@@ -25,6 +26,7 @@ export default function ProducerStudioPage() {
     switchSource,
     callerQueue,
     activeCaller,
+    removeFromQueue,
     goOnAir,
     goOnAirStream,
     endCall,
@@ -184,24 +186,24 @@ export default function ProducerStudioPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       
       {/* 1. Left Sidebar */}
       <Sidebar activeItem="Live Studio Feed" />
 
-      {/* 2. Main Content Deck */}
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
-        
-        {/* Header control deck */}
-        <header className="flex justify-between items-center border-b border-border-warm pb-4 shrink-0">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
-              Producer Control Deck
-            </h1>
-            
-            {/* Read-Only Source Status Badge */}
-            <div className="flex items-center gap-2">
-              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+      {/* 2. Main Content Deck Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Live Studio Control Desk"
+          subtitle="Manage ingest feeds, monitor live transcripts, and coordinate the screener queue."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+            </svg>
+          }
+          actions={
+            <div className="flex items-center gap-3 justify-end whitespace-nowrap">
+              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
                 !isLive ? "bg-foreground/5 text-foreground/40 border border-border-warm" :
                 activeSource === "HotLine" ? "bg-amber-50 text-amber-700 border border-amber-200" :
                 activeSource === "YouTubeLive" ? "bg-red-50 text-red-700 border border-red-200" :
@@ -213,76 +215,69 @@ export default function ProducerStudioPage() {
                 {isLive && activeSource === "LiveTV" && "📺 Ingest: Television Matrix"}
                 {isLive && activeSource === "RadioAoIP" && "📻 Ingest: Radio AoIP Stream"}
               </span>
+
+              {isLive && (
+                <div className="hidden xl:flex items-center gap-4 bg-background border border-border-warm rounded-xl px-3 py-1.5 shadow-2xs">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Presenter Mic</span>
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(12)].map((_, i) => {
+                          const limit = -60 + (i * 5);
+                          const active = presenterDb >= limit;
+                          const isHot = limit > -10;
+                          return (
+                            <span
+                              key={i}
+                              className={`w-1 h-2 rounded-xs transition-colors duration-75 ${
+                                !active ? "bg-foreground/5" : isHot ? "bg-red-500" : "bg-emerald-500"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Citizen Line</span>
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(12)].map((_, i) => {
+                          const limit = -60 + (i * 5);
+                          const active = ingestDb >= limit;
+                          const isHot = limit > -10;
+                          return (
+                            <span
+                              key={i}
+                              className={`w-1 h-2 rounded-xs transition-colors duration-75 ${
+                                !active ? "bg-foreground/5" : isHot ? "bg-red-500" : "bg-emerald-500"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                </div>
+              )}
+
+              {!isLive ? (
+                <button
+                  onClick={handleOpenConfigClick}
+                  className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap"
+                >
+                  Connect Ingest Feed
+                </button>
+              ) : (
+                <button
+                  onClick={handleDisconnectClick}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap"
+                >
+                  Disconnect Feed
+                </button>
+              )}
             </div>
-          </div>
+          }
+        />
 
-          {/* Go On-Air Trigger Buttons & VU meters */}
-          <div className="flex items-center gap-6">
-            
-            {/* Live Dual Audio VU Meters */}
-            {isLive && (
-              <div className="flex items-center gap-4 bg-background border border-border-warm rounded-xl px-4 py-1.5 shadow-2xs">
-                {/* Presenter Level */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Presenter Mic</span>
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(12)].map((_, i) => {
-                      const limit = -60 + (i * 5);
-                      const active = presenterDb >= limit;
-                      const isHot = limit > -10;
-                      return (
-                        <span 
-                          key={i} 
-                          className={`w-1 h-2 rounded-xs transition-colors duration-75 ${
-                            !active ? "bg-foreground/5" : isHot ? "bg-red-500" : "bg-emerald-500"
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Ingest Line Level */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Citizen Line</span>
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(12)].map((_, i) => {
-                      const limit = -60 + (i * 5);
-                      const active = ingestDb >= limit;
-                      const isHot = limit > -10;
-                      return (
-                        <span 
-                          key={i} 
-                          className={`w-1 h-2 rounded-xs transition-colors duration-75 ${
-                            !active ? "bg-foreground/5" : isHot ? "bg-red-500" : "bg-emerald-500"
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!isLive && (
-              <button
-                onClick={handleOpenConfigClick}
-                className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors"
-              >
-                Connect Ingest Feed
-              </button>
-            )}
-            
-            {isLive && (
-              <button 
-                onClick={handleDisconnectClick}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors"
-              >
-                Disconnect Feed
-              </button>
-            )}
-          </div>
-        </header>
+        <main className="flex-1 p-6 md:p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
 
         {/* Workspace Layout Grid */}
         <div className="flex-1 grid grid-cols-3 gap-6 overflow-hidden">
@@ -414,17 +409,29 @@ export default function ProducerStudioPage() {
                             <span className="text-[9px] text-foreground/50">{caller.region}</span>
                           </div>
                           
-                          <button
-                            onClick={() => goOnAir(caller)}
-                            disabled={isLive && activeCaller?.id === caller.id}
-                            className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                              activeCaller?.id === caller.id
-                                ? "bg-active-green text-white cursor-default"
-                                : "bg-gold hover:bg-gold-hover text-white"
-                            }`}
-                          >
-                            {activeCaller?.id === caller.id ? "On Air" : "PATCH IN"}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => goOnAir(caller)}
+                              disabled={isLive && activeCaller?.id === caller.id}
+                              className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                                activeCaller?.id === caller.id
+                                  ? "bg-active-green text-white cursor-default"
+                                  : "bg-gold hover:bg-gold-hover text-white"
+                              }`}
+                            >
+                              {activeCaller?.id === caller.id ? "On Air" : "PATCH IN"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeFromQueue(caller.id)}
+                              className="p-1 text-foreground/40 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              title="Remove caller from queue"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -844,6 +851,8 @@ export default function ProducerStudioPage() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }
+

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Sidebar } from "../../components/Sidebar";
+import { PortalHeader } from "../../components/PortalHeader";
 import { useBroadcast } from "../../context/BroadcastContext";
 
 const CATEGORIES = ["Housing Allocation", "Health & Medical", "Employment Opportunity", "Financial Assistance", "Government Services"];
@@ -50,7 +51,7 @@ const INITIAL_LINES: HotlineLine[] = [
 ];
 
 export default function ScreenerPage() {
-  const { addCallerToQueue, callerQueue } = useBroadcast();
+  const { addCallerToQueue, removeFromQueue, callerQueue } = useBroadcast();
 
   // Hotline Lines State
   const [lines, setLines] = useState<HotlineLine[]>(INITIAL_LINES);
@@ -173,32 +174,33 @@ export default function ScreenerPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       
       {/* 1. Left Sidebar */}
       <Sidebar activeItem="Call Screener Desk" />
 
-      {/* 2. Main Content Workspace */}
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-        
-        {/* Header */}
-        <header className="border-b border-border-warm pb-5 flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-              Live Call Screening Desk
-            </h1>
-            <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-              Intake citizen calls, verify credentials, log basic details, and route tickets to the live studio queue
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={simulateIncomingCall}
-            className="px-4 py-2 border border-gold bg-gold/5 text-gold hover:bg-gold hover:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm shadow-gold/10"
-          >
-            ⚡ Simulate Call Ring
-          </button>
-        </header>
+      {/* 2. Main Content Workspace Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Live Call Screening Desk"
+          subtitle="Intake citizen calls, verify credentials, log basic details, and route tickets to the live studio queue."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+          }
+          actions={
+            <button
+              type="button"
+              onClick={simulateIncomingCall}
+              className="px-4 py-2 border border-gold bg-gold/5 text-gold hover:bg-gold hover:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm shadow-gold/10"
+            >
+              ⚡ Simulate Call Ring
+            </button>
+          }
+        />
+
+        <main className="flex-1 min-h-0 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* ── NEW: Hotline Hardware Status / PBX Monitor Panel ── */}
         <section className="bg-card border border-border-warm rounded-xl p-5 shadow-[0_2px_8px_rgba(20,19,17,0.02)]">
@@ -416,15 +418,33 @@ export default function ScreenerPage() {
                 callerQueue.map((caller) => (
                   <div 
                     key={caller.id}
-                    className="p-3 border border-border-warm bg-background rounded-lg flex flex-col gap-1 hover:border-gold transition-colors duration-150 relative overflow-hidden"
+                    className="p-3 border border-border-warm bg-background rounded-lg flex flex-col gap-1 hover:border-gold/50 transition-colors duration-150 relative overflow-hidden group"
                   >
                     <div className="flex justify-between items-start">
-                      <span className="font-bold text-primary-text-gold text-xs block">{caller.fullName}</span>
-                      <span className="text-[9px] bg-green-50 border border-green-200 text-active-green px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                        Queued
-                      </span>
+                      <div>
+                        <span className="font-bold text-primary-text-gold text-xs block">{caller.fullName}</span>
+                        <span className="text-[10px] font-medium text-foreground/60">{caller.region}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] bg-green-50 border border-green-200 text-active-green px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                          Queued
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            removeFromQueue(caller.id);
+                            setInfoMsg(`🗑️ ${caller.fullName} removed from queue.`);
+                            setTimeout(() => setInfoMsg(""), 3000);
+                          }}
+                          className="p-1 text-foreground/40 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                          title="Remove caller from queue"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-medium text-foreground/60">{caller.region}</span>
                     <span className="text-[9px] font-bold text-foreground/40 uppercase tracking-widest mt-1 block">{caller.category}</span>
                     <p className="text-[11px] text-foreground/80 mt-1 line-clamp-2 italic">
                       "{caller.notes}"
@@ -434,10 +454,11 @@ export default function ScreenerPage() {
               )}
             </div>
           </section>
-
         </div>
       </main>
-
     </div>
-  );
+  </div>
+);
 }
+
+

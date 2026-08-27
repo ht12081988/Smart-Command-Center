@@ -1,58 +1,115 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
 import { ExecutiveNav } from "../../../components/ExecutiveNav";
+import { Pagination } from "../../../components/Pagination";
 import { MOCK_CASES } from "../../cases/page";
 
 // ─── Entity analytics helpers ─────────────────────────────────────────────────
-const entities = [...new Set(MOCK_CASES.map(c => c.externalEntity).filter(e => e && e !== "TBD"))];
-
-function getEntityStats(entity: string) {
-  const cases = MOCK_CASES.filter(c => c.externalEntity === entity);
-  const total  = cases.length;
-  const overdue = cases.filter(c => c.slaHours !== undefined && c.slaHours < 0).length;
-  const onTime  = cases.filter(c => c.slaHours === undefined || c.slaHours >= 0).length;
-  const compliance = total > 0 ? Math.round((onTime / total) * 100) : 100;
-  const avgResponse = total > 0 ? `${(Math.random() * 4 + 1).toFixed(1)}d` : "—"; // mock
-  const rating: "Good" | "At Risk" | "Poor" =
-    compliance >= 80 ? "Good" : compliance >= 50 ? "At Risk" : "Poor";
-  return { total, overdue, onTime, compliance, avgResponse, rating, cases };
-}
-
 const RATING_STYLES = {
   Good:    { pill: "text-green-600 bg-green-50 border-green-200", bar: "bg-green-500" },
   "At Risk": { pill: "text-orange-600 bg-orange-50 border-orange-200", bar: "bg-orange-400" },
   Poor:    { pill: "text-red-600 bg-red-50 border-red-200",    bar: "bg-red-500" },
 };
 
-export default function EntityScorecardPage() {
+function EntityScorecardContent() {
   const [expandedEntity, setExpandedEntity] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"compliance" | "overdue" | "total">("compliance");
 
-  const entityStats = entities.map(e => ({ entity: e, ...getEntityStats(e) }));
+  const searchParams = useSearchParams();
+  const dateFilter = searchParams.get("filter") || "Last Month";
+  const customStart = searchParams.get("start") || "2026-08-01";
+  const customEnd = searchParams.get("end") || "2026-08-27";
+
+  const filterByDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+    const itemDate = new Date(datePart);
+    const targetDate = new Date("2026-08-27");
+
+    switch (dateFilter) {
+      case "Today":
+        return datePart === "2026-08-27";
+      case "Yesterday":
+        return datePart === "2026-08-26";
+      case "Last Week": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 7;
+      }
+      case "Last Month": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 30;
+      }
+      case "Last 90 Days": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 90;
+      }
+      case "Date Range": {
+        if (!customStart || !customEnd) return true;
+        const start = new Date(customStart);
+        const end = new Date(customEnd);
+        return itemDate >= start && itemDate <= end;
+      }
+      default:
+        return true;
+    }
+  };
+
+  const filteredCases = MOCK_CASES.filter(c => filterByDate(c.createdAt));
+
+  function getEntityStatsLocal(entity: string) {
+    const cases = filteredCases.filter(c => c.externalEntity === entity);
+    const total  = cases.length;
+    const overdue = cases.filter(c => c.slaHours !== undefined && c.slaHours < 0).length;
+    const onTime  = cases.filter(c => c.slaHours === undefined || c.slaHours >= 0).length;
+    const compliance = total > 0 ? Math.round((onTime / total) * 100) : 100;
+    const avgResponse = total > 0 ? `${(Math.random() * 4 + 1).toFixed(1)}d` : "—";
+    const rating: "Good" | "At Risk" | "Poor" =
+      compliance >= 80 ? "Good" : compliance >= 50 ? "At Risk" : "Poor";
+    return { total, overdue, onTime, compliance, avgResponse, rating, cases };
+  }
+
+  const entities = [...new Set(filteredCases.map(c => c.externalEntity).filter(e => e && e !== "TBD"))];
+  const entityStats = entities.map(e => ({ entity: e, ...getEntityStatsLocal(e) }));
   const sorted = [...entityStats].sort((a, b) => {
     if (sortBy === "compliance") return b.compliance - a.compliance;
     if (sortBy === "overdue") return b.overdue - a.overdue;
     return b.total - a.total;
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortBy]);
+
+  const totalPages = Math.ceil(sorted.length / pageSize) || 1;
+  const paginatedSorted = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans selection:bg-gold/30">
+    <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans selection:bg-gold/30">
       <Sidebar activeItem="Executive Command Center" />
 
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        <header className="shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border-warm px-8 py-5">
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-            <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Entity Performance Scorecard"
+          subtitle="SLA compliance rankings across all external government authorities."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            Entity Performance Scorecard
-          </h1>
-          <p className="text-sm text-foreground/60 mt-1">SLA compliance rankings across all external government authorities.</p>
-        </header>
+          }
+        />
 
         <ExecutiveNav />
 
@@ -105,7 +162,7 @@ export default function EntityScorecardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((row, i) => {
+                  {paginatedSorted.map((row, i) => {
                     const rs = RATING_STYLES[row.rating];
                     const isExpanded = expandedEntity === row.entity;
                     return (
@@ -189,9 +246,28 @@ export default function EntityScorecardPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sorted.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
           </div>
         </main>
       </div>
     </div>
+  );
+}
+
+export default function EntityScorecardPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background text-foreground">Loading Entity Scorecard...</div>}>
+      <EntityScorecardContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
+import { PortalHeader } from "@/components/PortalHeader";
+import { Pagination } from "@/components/Pagination";
 
 export type LiaisonOfficer = {
   id: string;
@@ -101,6 +103,17 @@ export default function DirectoryOfEntitiesPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const totalPages = Math.ceil(filteredEntities.length / pageSize) || 1;
+  const paginatedEntities = filteredEntities.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const handleOpenAdd = () => {
     setEditingEntity(null);
     setFormState({ name: "", status: "Active", departments: [] });
@@ -184,29 +197,32 @@ export default function DirectoryOfEntitiesPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       <Sidebar activeItem="Directory of Entities" />
 
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
-        <header className="border-b border-border-warm pb-5 flex justify-between items-end shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-              Directory of Entities & Officials
-            </h1>
-            <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-              Manage organizational registries, departments, and liaison officers.
-            </p>
-          </div>
-          <button 
-            onClick={handleOpenAdd}
-            className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
-          >
-            + Add Entity
-          </button>
-        </header>
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Directory of Entities & Officials"
+          subtitle="Manage organizational registries, departments, and liaison officers."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          }
+          actions={
+            <button 
+              onClick={handleOpenAdd}
+              className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
+            >
+              + Add Entity
+            </button>
+          }
+        />
+
+        <main className="flex-1 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* Filters */}
-        <section className="flex gap-4 items-center shrink-0">
+        <section className="flex gap-4 items-center">
           <div className="flex-1 relative">
             <input
               type="text"
@@ -235,8 +251,9 @@ export default function DirectoryOfEntitiesPage() {
         </section>
 
         {/* Main Table List */}
-        <section className="bg-card border border-border-warm rounded-xl overflow-y-auto shadow-[0_2px_8px_rgba(20,19,17,0.02)] flex-1">
-          <table className="w-full border-collapse text-left text-sm">
+        <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 shadow-sm">
               <tr className="border-b border-border-warm text-foreground/50 font-semibold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Entity Reference</th>
@@ -247,7 +264,7 @@ export default function DirectoryOfEntitiesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-warm">
-              {filteredEntities.map((ent) => (
+              {paginatedEntities.map((ent) => (
                 <tr key={ent.id} className="hover:bg-background/25 transition-colors group">
                   <td className="py-4 px-6 align-top">
                     <span className="font-bold text-foreground block mb-0.5">{ent.name}</span>
@@ -318,6 +335,18 @@ export default function DirectoryOfEntitiesPage() {
               )}
             </tbody>
           </table>
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredEntities.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </section>
       </main>
 
@@ -456,6 +485,8 @@ export default function DirectoryOfEntitiesPage() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }
+

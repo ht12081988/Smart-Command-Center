@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
+import { Pagination } from "../../../components/Pagination";
 import { useRouter } from "next/navigation";
 
 // Define structured permissions
@@ -33,7 +35,8 @@ const SYSTEM_MODULES = [
   "Case Management",
   "Resolution & Follow-up",
   "Executive Directives",
-  "User Access Directory"
+  "User Access Directory",
+  "Smart Search"
 ];
 
 const INITIAL_ROLES: RoleDefinition[] = [
@@ -142,10 +145,14 @@ export default function AdminRolesPage() {
     SYSTEM_MODULES.map(m => ({ moduleName: m, view: false, add: false, edit: false, delete: false, download: false }))
   );
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Check if current user is Admin
   if (!user || user.role !== "Administrator") {
     return (
-      <div className="min-h-screen bg-background flex flex-col justify-center items-center p-6 text-center">
+      <div className="h-screen overflow-hidden bg-background flex flex-col justify-center items-center p-6 text-center">
         <div className="bg-card border border-border-warm rounded-2xl p-8 max-w-md shadow-sm">
           <div className="text-red-600 font-bold text-lg mb-2">Access Denied</div>
           <p className="text-sm text-foreground/75 mb-6">
@@ -255,35 +262,43 @@ export default function AdminRolesPage() {
     return matchesSearch && matchesDept;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, deptFilter]);
+
+  const totalPages = Math.ceil(filteredRoles.length / pageSize) || 1;
+  const paginatedRoles = filteredRoles.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // Extract list of unique departments for filter dropdown
   const departmentsList = Array.from(new Set(roles.map(r => r.department)));
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       
       {/* 1. Left Sidebar */}
       <Sidebar activeItem="Roles & Permissions" />
 
-      {/* 2. Main Workspace Content */}
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
-        
-        {/* Header */}
-        <header className="flex justify-between items-center border-b border-border-warm pb-5">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-              Roles & Permissions
-            </h1>
-            <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-              Configure system roles, access policies, and permission matrices for SBA modules
-            </p>
-          </div>
-          <button 
-            onClick={openCreateModal}
-            className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-colors flex items-center gap-2"
-          >
-            <span>+</span> Create New Role
-          </button>
-        </header>
+      {/* 2. Main Workspace Content Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Roles & Permissions Console"
+          subtitle="Configure system roles, access policies, and permission matrices for SBA modules."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          }
+          actions={
+            <button 
+              onClick={openCreateModal}
+              className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-colors flex items-center gap-2"
+            >
+              <span>+</span> Create New Role
+            </button>
+          }
+        />
+
+        <main className="flex-1 min-h-0 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* Filter bar */}
         <section className="flex gap-4 items-center">
@@ -316,8 +331,9 @@ export default function AdminRolesPage() {
         </section>
 
         {/* Roles list */}
-        <section className="bg-card border border-border-warm rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)]">
-          <table className="w-full border-collapse text-left text-sm">
+        <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border-warm bg-background/50 text-foreground/50 font-semibold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Role Name</th>
@@ -329,7 +345,7 @@ export default function AdminRolesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-warm">
-              {filteredRoles.map((role) => {
+              {paginatedRoles.map((role) => {
                 // Calculate modules with active permissions
                 const activeModulesCount = role.permissions.filter(
                   p => p.view || p.add || p.edit || p.delete || p.download
@@ -393,6 +409,18 @@ export default function AdminRolesPage() {
               })}
             </tbody>
           </table>
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredRoles.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </section>
       </main>
 
@@ -591,6 +619,9 @@ export default function AdminRolesPage() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }
+
+

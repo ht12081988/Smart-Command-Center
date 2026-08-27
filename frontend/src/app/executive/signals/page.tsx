@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Sidebar } from "../../../components/Sidebar";
+import { PortalHeader } from "../../../components/PortalHeader";
 import { ExecutiveNav } from "../../../components/ExecutiveNav";
+import { Pagination } from "../../../components/Pagination";
 import { MOCK_CASES } from "../../cases/page";
 
 // ─── Mocked AI Signal Clusters ────────────────────────────────────────────────
@@ -94,43 +97,88 @@ const LEVEL_STYLES = {
   },
 };
 
-export default function AISignalsPage() {
+function AISignalsContent() {
   const [expandedSignal, setExpandedSignal] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(2);
+
+  const searchParams = useSearchParams();
+  const dateFilter = searchParams.get("filter") || "Last Month";
+  const customStart = searchParams.get("start") || "2026-08-01";
+  const customEnd = searchParams.get("end") || "2026-08-27";
+
+  const filterByDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+    const itemDate = new Date(datePart);
+    const targetDate = new Date("2026-08-27");
+
+    switch (dateFilter) {
+      case "Today":
+        return datePart === "2026-08-27";
+      case "Yesterday":
+        return datePart === "2026-08-26";
+      case "Last Week": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 7;
+      }
+      case "Last Month": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 30;
+      }
+      case "Last 90 Days": {
+        const diffTime = targetDate.getTime() - itemDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 90;
+      }
+      case "Date Range": {
+        if (!customStart || !customEnd) return true;
+        const start = new Date(customStart);
+        const end = new Date(customEnd);
+        return itemDate >= start && itemDate <= end;
+      }
+      default:
+        return true;
+    }
+  };
+
+  const filteredClusters = SIGNAL_CLUSTERS.map(cluster => {
+    const related = cluster.relatedCases.filter(c => filterByDate(c.createdAt));
+    return {
+      ...cluster,
+      caseCount: related.length,
+      relatedCases: related
+    };
+  }).filter(cluster => cluster.caseCount > 0);
+
+  const totalPages = Math.ceil(filteredClusters.length / pageSize) || 1;
+  const paginatedSignals = filteredClusters.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans selection:bg-gold/30">
+    <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans selection:bg-gold/30">
       <Sidebar activeItem="Executive Command Center" />
 
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        <header className="shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border-warm px-8 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-                <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Root-Cause & Emerging Signal Intelligence
-              </h1>
-              <p className="text-sm text-foreground/60 mt-1">AI-clustered case patterns flagging systemic service failures for leadership review.</p>
-            </div>
-            {/* Anomaly Banner */}
-            <motion.div
-              animate={{ opacity: [1, 0.7, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-xl text-xs text-purple-300 font-bold"
-            >
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-              ⚡ Medical Bill cases up 340% vs. last month
-            </motion.div>
-          </div>
-        </header>
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Root-Cause & Emerging Signal Intelligence"
+          subtitle="AI-clustered case patterns flagging systemic service failures for leadership review."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          }
+        />
 
         <ExecutiveNav />
 
         <main className="flex-1 overflow-y-auto p-6 space-y-4">
 
           <div className="grid grid-cols-2 gap-4">
-            {SIGNAL_CLUSTERS.map((signal, i) => {
+            {paginatedSignals.map((signal, i) => {
               const styles = LEVEL_STYLES[signal.level];
               const isExpanded = expandedSignal === signal.id;
               return (
@@ -228,8 +276,28 @@ export default function AISignalsPage() {
               );
             })}
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredClusters.length}
+            pageSize={pageSize}
+            pageSizeOptions={[2, 4, 10]}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AISignalsPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background text-foreground">Loading AI Signals...</div>}>
+      <AISignalsContent />
+    </Suspense>
   );
 }

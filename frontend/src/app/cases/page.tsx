@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { Sidebar } from "../../components/Sidebar";
+import { PortalHeader } from "../../components/PortalHeader";
+import { Pagination } from "../../components/Pagination";
 import Link from "next/link";
 import { MOCK_DIRECTIVES, ExecutiveDirective } from "../directives/page";
 import { MOCK_ARCHIVES, ArchiveSession } from "../studio/archives/page";
@@ -443,6 +445,17 @@ export default function CaseManagementPage() {
     return matchesSearch && matchesStatus && matchesAssignment;
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, assignmentFilter]);
+
+  const totalPages = Math.ceil(filteredCases.length / pageSize) || 1;
+  const paginatedCases = filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const { user } = useAuth();
 
   const [showCreateCaseDrawer, setShowCreateCaseDrawer] = useState(false);
@@ -586,26 +599,29 @@ export default function CaseManagementPage() {
 
       <Sidebar activeItem="Case Management" />
 
-      <main className="flex-1 p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
-        <header className="border-b border-border-warm pb-5 flex justify-between items-end shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-              Case Management (CRM)
-            </h1>
-            <p className="text-xs text-foreground/50 font-medium uppercase tracking-wider mt-1">
-              Manage requests from start to closure. Track SLAs, delegations, and timelines.
-            </p>
-          </div>
-          <button 
-            onClick={openCreateDrawer}
-            className="bg-gold hover:bg-gold-hover text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
-          >
-            + Create Case
-          </button>
-        </header>
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Case Management (CRM)"
+          subtitle="Manage requests from start to closure. Track SLAs, delegations, and timelines."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          }
+          actions={
+            <button 
+              onClick={openCreateDrawer}
+              className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
+            >
+              + Create Case
+            </button>
+          }
+        />
+
+        <main className="flex-1 p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
 
         {/* Status KPI Tabs */}
-        <section className="grid grid-cols-5 2xl:grid-cols-10 gap-3 shrink-0">
+        <section className="grid grid-cols-5 2xl:grid-cols-10 gap-3">
           {ALL_STATUSES.map(status => {
             const count = status === "All" ? cases.length : cases.filter(c => c.status === status).length;
             const isActive = statusFilter === status;
@@ -660,8 +676,9 @@ export default function CaseManagementPage() {
         </section>
 
         {/* Main Table List */}
-        <section className="bg-card border border-border-warm rounded-xl overflow-y-auto shadow-[0_2px_8px_rgba(20,19,17,0.02)] flex-1">
-          <table className="w-full border-collapse text-left text-sm">
+        <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 shadow-sm">
               <tr className="border-b border-border-warm text-foreground/50 font-semibold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Case Reference</th>
@@ -672,7 +689,7 @@ export default function CaseManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-warm">
-              {filteredCases.map((c) => (
+              {paginatedCases.map((c) => (
                 <tr key={c.id} className="hover:bg-background/25 transition-colors group">
                   <td className="py-4 px-6">
                     <span className="font-bold text-primary-text-gold block mb-0.5">{c.id}</span>
@@ -732,8 +749,21 @@ export default function CaseManagementPage() {
               ))}
             </tbody>
           </table>
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredCases.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </section>
       </main>
+    </div>
 
       {/* Detail Workspace Full Page Model */}
       {selectedCase && (

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
+import { PortalHeader } from "@/components/PortalHeader";
+import { Pagination } from "@/components/Pagination";
 import { CaseDetailWorkspace, MOCK_CASES, Case, MOCK_CITIZENS_REGISTRY } from "../cases/page";
 
 export type DirectiveStatus = "Active" | "Pending Verification" | "Closed";
@@ -164,6 +166,12 @@ export default function ExecutiveDirectivesPage() {
     proofFiles: null as FileList | null,
     signOff: false
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const totalPages = Math.ceil(directives.length / pageSize) || 1;
+  const paginatedDirectives = directives.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // KPIs
   const activeCount = directives.filter(d => d.status === "Active").length;
@@ -347,28 +355,27 @@ export default function ExecutiveDirectivesPage() {
   const uniqueEntityNames = Array.from(new Set(MOCK_ENTITIES.map(e => e.name)));
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans selection:bg-gold/30">
+    <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans selection:bg-gold/30">
       <Sidebar activeItem="Executive Directives" />
 
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        {/* Header */}
-        <header className="shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border-warm px-8 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
-            <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        <PortalHeader
+          title="Executive Directives Dashboard"
+          subtitle="Strategic oversight and management of high-level leadership orders."
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.242.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.971-2.883a1 1 0 00-1.176 0l-3.97 2.883c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118L2.98 12.08c-.783-.57-.384-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-            Executive Directives Dashboard
-          </h1>
-          <p className="text-sm text-foreground/60 mt-1">Strategic oversight and management of high-level leadership orders.</p>
-        </div>
-        <button onClick={() => openDrawer()} className="bg-gold hover:bg-gold-light text-black px-5 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-gold/20 transition-all flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Log Directive
-        </button>
-      </header>
+          }
+          actions={
+            <button onClick={() => openDrawer()} className="bg-gold hover:bg-gold-light text-black px-4 py-2 rounded-xl font-bold text-xs tracking-wide shadow-sm shadow-gold/20 transition-all flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              Log Directive
+            </button>
+          }
+        />
 
-      <main className="flex-1 overflow-y-auto p-6 w-full space-y-6">
+      <main className="flex-1 overflow-y-auto p-6 w-full flex flex-col gap-6">
         {/* KPI Dashboard */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-orange-500 to-orange-700 p-5 rounded-2xl border border-orange-400/30 text-white shadow-xl shadow-orange-900/20 relative overflow-hidden">
@@ -413,7 +420,7 @@ export default function ExecutiveDirectivesPage() {
         </div>
 
         {/* Data Table */}
-        <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+        <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden flex flex-col">
           <div className="px-6 py-4 border-b border-border-warm bg-foreground/[0.02]">
             <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">Directive Master List</h2>
           </div>
@@ -431,7 +438,7 @@ export default function ExecutiveDirectivesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-warm">
-                {directives.map(d => (
+                {paginatedDirectives.map(d => (
                   <tr key={d.id} className="hover:bg-foreground/[0.01] transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-foreground">{d.id}</div>
@@ -491,6 +498,17 @@ export default function ExecutiveDirectivesPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={directives.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       </main>
 

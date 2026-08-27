@@ -1,6 +1,6 @@
 # Smart Command Center for Humanitarian Case Management
 
-An integrated digital system powered by artificial intelligence for the Sharjah Broadcasting Authority (SBA) "Direct Line" (*Alam wa Amal*) program.
+An integrated digital system powered by artificial intelligence for the Broadcasting Authority.
 
 ## Monorepo Layout
 

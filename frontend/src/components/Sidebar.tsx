@@ -49,6 +49,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       )
     },
     {
+      name: "Smart Search",
+      href: "/executive/search",
+      icon: (
+        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      )
+    },
+    {
       name: "Live Studio Feed",
       href: user.role === "Presenter" ? "/studio/host" : "/studio/producer",
       icon: (
@@ -140,13 +149,65 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
     }
   ];
 
+  // Role permissions module access definition
+  const ROLE_PERMISSIONS: Record<string, string[]> = {
+    Administrator: [
+      "Executive Command Center",
+      "Smart Search",
+      "Live Studio Feed",
+      "Call Screener Desk",
+      "Broadcast Archives",
+      "Citizen Profiles",
+      "Case Management",
+      "Resolution & Follow-up",
+      "Executive Directives",
+      "Directory of Entities",
+      "User Access Directory",
+      "Roles & Permissions"
+    ],
+    SBAExecutive: [
+      "Executive Command Center",
+      "Smart Search",
+      "Broadcast Archives",
+      "Resolution & Follow-up",
+      "Executive Directives"
+    ],
+    Presenter: [
+      "Live Studio Feed",
+      "Broadcast Archives",
+      "Citizen Profiles"
+    ],
+    Producer: [
+      "Live Studio Feed",
+      "Call Screener Desk",
+      "Broadcast Archives",
+      "Citizen Profiles",
+      "Case Management",
+      "Executive Directives"
+    ],
+    CaseManager: [
+      "Citizen Profiles",
+      "Case Management",
+      "Resolution & Follow-up",
+      "Executive Directives"
+    ],
+    ExternalLiaison: [
+      "Resolution & Follow-up"
+    ]
+  };
+
+  const permittedItems = navItems.filter((item) => {
+    const allowed = ROLE_PERMISSIONS[user.role] || [];
+    return allowed.includes(item.name);
+  });
+
   return (
     <aside
-      className={`bg-sidebar-bg flex flex-col justify-between border-r border-sidebar-bg/50 shrink-0 text-sidebar-fg transition-all duration-300 ease-in-out ${
+      className={`bg-sidebar-bg flex h-screen flex-col overflow-hidden border-r border-sidebar-bg/50 shrink-0 text-sidebar-fg transition-all duration-300 ease-in-out ${
         isCollapsed ? "w-[76px]" : "w-[260px]"
       }`}
     >
-      <div>
+      <div className="shrink-0">
         {/* Brand Logo & Collapse Toggle */}
         <div className="p-4 border-b border-white/5 flex items-center justify-between min-h-[73px]">
           <div className="flex items-center gap-3 overflow-hidden">
@@ -184,14 +245,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
         </div>
 
         {/* Navigation list */}
-        <nav className="p-3 flex flex-col gap-1 text-[13px] font-medium">
+        <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1 text-[13px] font-medium">
           {!isCollapsed && (
             <div className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-sidebar-fg/40 mb-1 animate-in fade-in duration-200">
               Main Modules
             </div>
           )}
           
-          {navItems.map((item, idx) => {
+          {permittedItems.map((item, idx) => {
             const isActive = activeItem ? activeItem === item.name : pathname === item.href;
             return (
               <a
@@ -216,7 +277,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       </div>
 
       {/* User Profile */}
-      <div className="flex flex-col border-t border-white/5 bg-black/10">
+      <div className="shrink-0 flex flex-col border-t border-white/5 bg-black/10">
         {/* User Card info block */}
         <div className={`p-4 flex items-center justify-between ${isCollapsed ? "flex-col gap-3 p-3" : ""}`}>
           <div className="flex items-center gap-3">
