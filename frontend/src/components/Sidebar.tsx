@@ -58,20 +58,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       )
     },
     {
-      name: "Live Studio Feed",
-      href: user.role === "Presenter" ? "/studio/host" : "/studio/producer",
-      icon: (
-        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-        </svg>
-      )
-    },
-    {
       name: "Call Screener Desk",
       href: "/screener",
       icon: (
         <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+        </svg>
+      )
+    },
+    {
+      name: "Live Studio Feed",
+      href: user.role === "Presenter" ? "/studio/host" : "/studio/producer",
+      icon: (
+        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
         </svg>
       )
     },
@@ -121,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       )
     },
     {
-      name: "Directory of Entities",
+      name: "External Entities",
       href: "/admin/entities",
       icon: (
         <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,6 +155,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
+    },
+    {
+      name: "AI Agent Settings",
+      href: "/admin/agents",
+      icon: (
+        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )
     }
   ];
 
@@ -170,10 +180,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       "Case Management",
       "Resolution & Follow-up",
       "Executive Directives",
-      "Directory of Entities",
+      "External Entities",
       "User Access Directory",
       "Roles & Permissions",
-      "Audit Logs"
+      "Audit Logs",
+      "AI Agent Settings"
     ],
     SBAExecutive: [
       "Executive Command Center",
@@ -217,74 +228,66 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
         isCollapsed ? "w-[76px]" : "w-[260px]"
       }`}
     >
-      <div className="shrink-0">
-        {/* Brand Logo & Collapse Toggle */}
-        <div className="p-4 border-b border-white/5 flex items-center justify-between min-h-[73px]">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <span className="w-8 h-8 rounded-full bg-gold-muted border border-gold/20 flex items-center justify-center text-gold font-bold text-xs shrink-0">
-              SBA
-            </span>
-            {!isCollapsed && (
-              <div className="animate-in fade-in duration-200">
-                <span className="block font-bold text-[12px] text-white tracking-wide uppercase leading-tight whitespace-nowrap">
-                  SMART COMMAND
-                </span>
-                <span className="text-[9px] text-sidebar-fg/60 tracking-wider uppercase font-medium whitespace-nowrap">
-                  Sharjah Broadcasting Authority
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {/* Collapse toggle button arrow */}
-          <button
-            onClick={toggleSidebar}
-            className="p-1.5 rounded hover:bg-white/5 hover:text-white transition-colors"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {isCollapsed ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Navigation list */}
-        <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1 text-[13px] font-medium">
+      {/* Brand Logo & Collapse Toggle */}
+      <div className="shrink-0 p-4 border-b border-white/5 flex items-center justify-between min-h-[73px]">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <span className="w-8 h-8 rounded-full bg-gold-muted border border-gold/20 flex items-center justify-center text-gold font-bold text-xs shrink-0">
+            SBA
+          </span>
           {!isCollapsed && (
-            <div className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-sidebar-fg/40 mb-1 animate-in fade-in duration-200">
-              Main Modules
+            <div className="animate-in fade-in duration-200">
+              <span className="block font-bold text-[12px] text-white tracking-wide uppercase leading-tight whitespace-nowrap">
+                SMART COMMAND
+              </span>
+              <span className="text-[9px] text-sidebar-fg/60 tracking-wider uppercase font-medium whitespace-nowrap">
+                Sharjah Broadcasting Authority
+              </span>
             </div>
           )}
-          
-          {permittedItems.map((item, idx) => {
-            const isActive = activeItem ? activeItem === item.name : pathname === item.href;
-            return (
-              <a
-                key={idx}
-                href={item.href}
-                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                  isActive
-                    ? "text-gold bg-gold-muted font-semibold"
-                    : "hover:text-white hover:bg-white/5"
-                }`}
-                title={isCollapsed ? item.name : undefined}
-              >
-                {isActive && (
-                  <span className="absolute left-[-12px] top-0 bottom-0 w-[4px] bg-active-cyan rounded-r"></span>
-                )}
-                {item.icon}
-                {!isCollapsed && <span className="animate-in fade-in duration-200">{item.name}</span>}
-              </a>
-            );
-          })}
-        </nav>
+        </div>
+        
+        {/* Collapse toggle button arrow */}
+        <button
+          onClick={toggleSidebar}
+          className="p-1.5 rounded hover:bg-white/5 hover:text-white transition-colors"
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {isCollapsed ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          )}
+        </button>
       </div>
+
+      {/* Navigation list */}
+      <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1 text-[13px] font-medium">
+        {permittedItems.map((item, idx) => {
+          const isActive = activeItem ? activeItem === item.name : pathname === item.href;
+          return (
+            <a
+              key={idx}
+              href={item.href}
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
+                isActive
+                  ? "text-gold bg-gold-muted font-semibold"
+                  : "hover:text-white hover:bg-white/5"
+              }`}
+              title={isCollapsed ? item.name : undefined}
+            >
+              {isActive && (
+                <span className="absolute left-[-12px] top-0 bottom-0 w-[4px] bg-active-cyan rounded-r"></span>
+              )}
+              {item.icon}
+              {!isCollapsed && <span className="animate-in fade-in duration-200">{item.name}</span>}
+            </a>
+          );
+        })}
+      </nav>
 
       {/* User Profile */}
       <div className="shrink-0 flex flex-col border-t border-white/5 bg-black/10">

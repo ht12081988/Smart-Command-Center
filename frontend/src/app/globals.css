@@ -47,3 +47,41 @@ body {
   color: var(--foreground);
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
+/* Sidebar Custom Scrollbar Styling */
+aside nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+aside nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside nav::-webkit-scrollbar-thumb {
+  background: var(--primary-gold);
+  border-radius: 4px;
+}
+
+aside nav::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-gold-hover);
+}
+
+aside nav::-webkit-scrollbar-button:single-button {
+  background-color: transparent;
+  display: block;
+  height: 10px;
+  width: 8px;
+}
+
+/* Up Arrow */
+aside nav::-webkit-scrollbar-button:single-button:vertical:decrement {
+  border-width: 0 4px 6px 4px;
+  border-color: transparent transparent var(--primary-gold) transparent;
+}
+
+/* Down Arrow */
+aside nav::-webkit-scrollbar-button:single-button:vertical:increment {
+  border-width: 6px 4px 0 4px;
+  border-color: var(--primary-gold) transparent transparent transparent;
+}
+

@@ -12,6 +12,7 @@ export type LiaisonOfficer = {
   phone: string;
   email: string;
   isPrimary: boolean;
+  isEscalation?: boolean;
 };
 
 export type Department = {
@@ -172,7 +173,8 @@ export default function DirectoryOfEntitiesPage() {
     const newOfficer: LiaisonOfficer = {
       id: `OFF-${Math.floor(Math.random() * 900) + 100}`,
       name: "", title: "", phone: "", email: "", 
-      isPrimary: updatedDepts[deptIndex].officers.length === 0
+      isPrimary: updatedDepts[deptIndex].officers.length === 0,
+      isEscalation: false
     };
     updatedDepts[deptIndex].officers.push(newOfficer);
     setFormState({ ...formState, departments: updatedDepts });
@@ -198,11 +200,11 @@ export default function DirectoryOfEntitiesPage() {
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
-      <Sidebar activeItem="Directory of Entities" />
+      <Sidebar activeItem="External Entities" />
 
       <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
         <PortalHeader
-          title="Directory of Entities & Officials"
+          title="External Entities & Officials"
           subtitle="Manage organizational registries, departments, and liaison officers."
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -446,10 +448,16 @@ export default function DirectoryOfEntitiesPage() {
                                     <input required type="email" value={officer.email} onChange={e => handleUpdateOfficer(deptIdx, officerIdx, "email", e.target.value)} className="w-full px-2 py-1.5 rounded border border-border-warm/50 bg-background text-xs focus:outline-none focus:border-gold" />
                                   </div>
                                 </div>
-                                <label className="flex items-center gap-2 cursor-pointer w-max">
-                                  <input type="checkbox" checked={officer.isPrimary} onChange={e => handleUpdateOfficer(deptIdx, officerIdx, "isPrimary", e.target.checked)} className="rounded border-border-warm text-gold focus:ring-gold focus:ring-offset-card" />
-                                  <span className="text-[9px] font-bold uppercase tracking-wider text-foreground/70">Primary Contact</span>
-                                </label>
+                                <div className="flex items-center gap-6 mt-1">
+                                  <label className="flex items-center gap-2 cursor-pointer w-max">
+                                    <input type="checkbox" checked={officer.isPrimary} onChange={e => handleUpdateOfficer(deptIdx, officerIdx, "isPrimary", e.target.checked)} className="rounded border-border-warm text-gold focus:ring-gold focus:ring-offset-card" />
+                                    <span className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">Primary Contact</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer w-max">
+                                    <input type="checkbox" checked={officer.isEscalation || false} onChange={e => handleUpdateOfficer(deptIdx, officerIdx, "isEscalation", e.target.checked)} className="rounded border-border-warm text-gold focus:ring-gold focus:ring-offset-card" />
+                                    <span className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">Escalation Officer</span>
+                                  </label>
+                                </div>
                               </div>
                             ))
                           )}

@@ -112,7 +112,10 @@ export default function ResolutionFollowUpPage() {
           {/* ── KPI Cards ─────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-            <div className="bg-gradient-to-br from-red-600 to-red-800 p-5 rounded-2xl border border-red-500/30 text-white shadow-xl shadow-red-900/20 relative overflow-hidden">
+            <div 
+              onClick={() => setFilterLabel(filterLabel === "Breached" ? "All" : "Breached")}
+              className={`p-5 rounded-2xl text-white shadow-xl shadow-red-900/20 relative overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${filterLabel === "Breached" ? "bg-gradient-to-br from-red-500 to-red-700 ring-2 ring-red-400 ring-offset-2 ring-offset-background" : "bg-gradient-to-br from-red-600 to-red-800 border border-red-500/30 opacity-90"}`}
+            >
               <div className="relative z-10 flex justify-between items-start">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest font-bold text-red-200 mb-1">SLA Breached</p>
@@ -126,7 +129,10 @@ export default function ResolutionFollowUpPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-500 to-orange-700 p-5 rounded-2xl border border-orange-400/30 text-white shadow-xl shadow-orange-900/20 relative overflow-hidden">
+            <div 
+              onClick={() => setFilterLabel(filterLabel === "At Risk" ? "All" : "At Risk")}
+              className={`p-5 rounded-2xl text-white shadow-xl shadow-orange-900/20 relative overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${filterLabel === "At Risk" ? "bg-gradient-to-br from-orange-400 to-orange-600 ring-2 ring-orange-400 ring-offset-2 ring-offset-background" : "bg-gradient-to-br from-orange-500 to-orange-700 border border-orange-400/30 opacity-90"}`}
+            >
               <div className="relative z-10 flex justify-between items-start">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest font-bold text-orange-100 mb-1">At Risk</p>
@@ -140,7 +146,10 @@ export default function ResolutionFollowUpPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-card to-background p-5 rounded-2xl border border-border-warm shadow-xl shadow-black/5 relative overflow-hidden">
+            <div 
+              onClick={() => setFilterLabel(filterLabel === "On Track" ? "All" : "On Track")}
+              className={`p-5 rounded-2xl shadow-xl shadow-black/5 relative overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${filterLabel === "On Track" ? "bg-gradient-to-br from-card to-background ring-2 ring-gold ring-offset-2 ring-offset-background" : "bg-gradient-to-br from-card to-background border border-border-warm opacity-90"}`}
+            >
               <div className="relative z-10 flex justify-between items-start">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest font-bold text-foreground/50 mb-1">On Track</p>
@@ -154,7 +163,10 @@ export default function ResolutionFollowUpPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100/50 p-5 rounded-2xl border border-green-200 shadow-xl shadow-green-900/5 relative overflow-hidden">
+            <div 
+              onClick={() => setFilterLabel(filterLabel === "Completed" ? "All" : "Completed")}
+              className={`p-5 rounded-2xl shadow-xl shadow-green-900/5 relative overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${filterLabel === "Completed" ? "bg-gradient-to-br from-green-50 to-green-100/50 ring-2 ring-green-500 ring-offset-2 ring-offset-background" : "bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 opacity-90"}`}
+            >
               <div className="relative z-10 flex justify-between items-start">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest font-bold text-green-700/60 mb-1">Completed</p>
@@ -174,24 +186,6 @@ export default function ResolutionFollowUpPage() {
           <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-border-warm bg-foreground/[0.02] flex items-center justify-between">
               <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">Externally Assigned Cases</h2>
-              <div className="flex gap-1.5">
-                {(["All", "Breached", "At Risk", "On Track", "Completed"] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFilterLabel(f)}
-                    className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                      filterLabel === f
-                        ? f === "Breached"    ? "bg-red-600 text-white"
-                          : f === "At Risk"   ? "bg-orange-500 text-white"
-                          : f === "Completed" ? "bg-green-600 text-white"
-                          : "bg-foreground text-background"
-                        : "bg-card border border-border-warm text-foreground/50 hover:text-foreground"
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="overflow-x-auto">

@@ -461,7 +461,7 @@ export default function CaseManagementPage() {
   const [showCreateCaseDrawer, setShowCreateCaseDrawer] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [newCaseForm, setNewCaseForm] = useState({
-    citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New"
+    citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New"
   });
   const [showCitizenSuggestions, setShowCitizenSuggestions] = useState(false);
 
@@ -477,7 +477,7 @@ export default function CaseManagementPage() {
 
   const openCreateDrawer = () => {
     setEditingCaseId(null);
-    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New" });
+    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New" });
     setShowCreateCaseDrawer(true);
   };
 
@@ -492,6 +492,7 @@ export default function CaseManagementPage() {
       slaHours: c.slaHours?.toString() || "",
       alertDate: c.alertDate || "",
       summary: c.summary,
+      facts: c.facts || "",
       caseOwner: c.caseOwner,
       externalEntity: c.externalEntity,
       entityDepartment: c.entityDepartment || "",
@@ -523,7 +524,8 @@ export default function CaseManagementPage() {
         entityDepartment: newCaseForm.entityDepartment || "TBD",
         liaisonOfficer: newCaseForm.liaisonOfficer || "TBD",
         status: newCaseForm.status as CaseStatus,
-        summary: newCaseForm.summary
+        summary: newCaseForm.summary,
+        facts: newCaseForm.facts
       } : c));
     } else {
       const newCase: Case = {
@@ -533,7 +535,7 @@ export default function CaseManagementPage() {
       citizenName: newCaseForm.citizenName,
       feedSource: "Manual Entry",
       summary: newCaseForm.summary,
-      facts: "Awaiting facts verification...",
+      facts: newCaseForm.facts || "Awaiting facts verification...",
       primaryClassification: newCaseForm.primaryClassification,
       secondaryClassification: newCaseForm.secondaryClassification || "N/A",
       priority: newCaseForm.priority as "Critical" | "High" | "Standard",
@@ -557,7 +559,7 @@ export default function CaseManagementPage() {
       setCases([newCase, ...cases]);
     }
     setShowCreateCaseDrawer(false);
-    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New" });
+    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New" });
   };
 
   const handleUpdateCase = (updatedCase: Case) => {
@@ -989,6 +991,11 @@ export default function CaseManagementPage() {
               <div>
                 <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Case Summary</label>
                 <textarea required value={newCaseForm.summary} onChange={e => setNewCaseForm({...newCaseForm, summary: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold h-24 resize-none" placeholder="Enter main request details..."></textarea>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Confirmed Facts</label>
+                <textarea value={newCaseForm.facts} onChange={e => setNewCaseForm({...newCaseForm, facts: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold h-24 resize-none" placeholder="Enter any confirmed facts..."></textarea>
               </div>
               <div className="mt-4 pt-4 border-t border-border-warm flex justify-end gap-3">
                 <button type="button" onClick={() => setShowCreateCaseDrawer(false)} className="px-4 py-2 rounded-lg text-xs font-bold text-foreground/60 uppercase tracking-widest hover:text-foreground transition-colors">Cancel</button>
@@ -1568,18 +1575,20 @@ export function CaseDetailWorkspace({
         </div>
       </div>
 
-      {/* Status Change Modal */}
+      {/* Right-to-Left Drawer for Update Status */}
       {showStatusModal && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border-warm rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
-            <div className="p-5 border-b border-border-warm flex justify-between items-center bg-background/50">
+        <div className="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-[450px] bg-card h-full shadow-2xl flex flex-col border-l border-border-warm animate-in slide-in-from-right duration-300">
+            <header className="px-6 py-5 border-b border-border-warm flex justify-between items-center bg-background shrink-0">
               <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">Update Case Status</h2>
               <button onClick={() => setShowStatusModal(false)} className="text-foreground/40 hover:text-foreground">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            </div>
+            </header>
             
-            <form onSubmit={handleStatusSubmit} className="p-6 flex flex-col gap-5">
+            <form onSubmit={handleStatusSubmit} className="p-6 flex flex-col gap-5 flex-1 overflow-y-auto">
               <div>
                 <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">New Status</label>
                 <select required value={newStatus} onChange={e => setNewStatus(e.target.value as CaseStatus)} className="w-full px-3 py-2.5 rounded-xl border border-border-warm bg-background text-sm font-semibold focus:outline-none focus:border-gold">
@@ -1605,8 +1614,24 @@ export function CaseDetailWorkspace({
                   placeholder="Explain why the status is changing..."
                 ></textarea>
               </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Attach File (Optional)</label>
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-border-warm border-dashed rounded-xl cursor-pointer bg-background hover:bg-foreground/5 hover:border-gold transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-8 h-8 mb-3 text-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="mb-2 text-xs text-foreground/60"><span className="font-bold">Click to upload</span> or drag and drop</p>
+                      <p className="text-[10px] text-foreground/40">SVG, PNG, JPG or PDF (MAX. 10MB)</p>
+                    </div>
+                    <input type="file" className="hidden" />
+                  </label>
+                </div>
+              </div>
               
-              <div className="mt-2 flex justify-end gap-3">
+              <div className="mt-4 pt-4 border-t border-border-warm flex justify-end gap-3">
                 <button type="button" onClick={() => setShowStatusModal(false)} className="px-4 py-2 rounded-lg text-xs font-bold text-foreground/60 uppercase tracking-widest hover:text-foreground transition-colors">Cancel</button>
                 <button type="submit" className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">Update Status & Timeline</button>
               </div>

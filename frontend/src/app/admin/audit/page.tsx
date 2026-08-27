@@ -33,7 +33,7 @@ const SYSTEM_MODULES = [
   "Case Management",
   "Resolution & Follow-up",
   "Executive Directives",
-  "Directory of Entities",
+  "External Entities",
   "User Access Directory",
   "Roles & Permissions",
   "Smart Search"

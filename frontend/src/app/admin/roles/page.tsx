@@ -37,7 +37,8 @@ const SYSTEM_MODULES = [
   "Executive Directives",
   "User Access Directory",
   "Smart Search",
-  "Audit Logs"
+  "Audit Logs",
+  "AI Agent Settings"
 ];
 
 const INITIAL_ROLES: RoleDefinition[] = [
