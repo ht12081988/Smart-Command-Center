@@ -36,7 +36,8 @@ const SYSTEM_MODULES = [
   "Resolution & Follow-up",
   "Executive Directives",
   "User Access Directory",
-  "Smart Search"
+  "Smart Search",
+  "Audit Logs"
 ];
 
 const INITIAL_ROLES: RoleDefinition[] = [
