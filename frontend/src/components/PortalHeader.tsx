@@ -29,11 +29,6 @@ export function PortalHeader({
             </div>
           )}
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold">
-                {badgeText}
-              </span>
-            </div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-tight uppercase truncate">
               {title}
             </h1>
