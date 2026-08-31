@@ -30,15 +30,21 @@ interface RoleDefinition {
 
 // Initial default roles
 const SYSTEM_MODULES = [
+  "Executive Command Center",
+  "Smart Search",
+  "Call Screener Desk",
   "Live Studio Feed",
+  "Broadcast Archives",
   "Citizen Profiles",
   "Case Management",
   "Resolution & Follow-up",
   "Executive Directives",
+  "External Entities",
   "User Access Directory",
-  "Smart Search",
+  "Roles & Permissions",
   "Audit Logs",
-  "AI Agent Settings"
+  "AI Agent Settings",
+  "Notification Templates"
 ];
 
 const INITIAL_ROLES: RoleDefinition[] = [
@@ -67,7 +73,7 @@ const INITIAL_ROLES: RoleDefinition[] = [
     isSystem: true,
     permissions: SYSTEM_MODULES.map((module) => ({
       moduleName: module,
-      view: module === "Live Studio Feed" || module === "Citizen Profiles",
+      view: ["Live Studio Feed", "Broadcast Archives", "Citizen Profiles"].includes(module),
       add: false,
       edit: false,
       delete: false,
@@ -83,7 +89,7 @@ const INITIAL_ROLES: RoleDefinition[] = [
     isSystem: true,
     permissions: SYSTEM_MODULES.map((module) => ({
       moduleName: module,
-      view: ["Live Studio Feed", "Citizen Profiles", "Case Management", "Executive Directives"].includes(module),
+      view: ["Live Studio Feed", "Call Screener Desk", "Broadcast Archives", "Citizen Profiles", "Case Management", "Executive Directives"].includes(module),
       add: module === "Case Management",
       edit: ["Live Studio Feed", "Case Management"].includes(module),
       delete: false,
@@ -99,7 +105,7 @@ const INITIAL_ROLES: RoleDefinition[] = [
     isSystem: true,
     permissions: SYSTEM_MODULES.map((module) => ({
       moduleName: module,
-      view: ["Citizen Profiles", "Case Management", "Resolution & Follow-up", "Executive Directives"].includes(module),
+      view: ["Citizen Profiles", "Case Management", "Resolution & Follow-up", "Executive Directives", "Notification Templates"].includes(module),
       add: ["Case Management", "Resolution & Follow-up"].includes(module),
       edit: ["Case Management", "Resolution & Follow-up"].includes(module),
       delete: false,
@@ -426,24 +432,35 @@ export default function AdminRolesPage() {
         </section>
       </main>
 
-      {/* 3. CRUD Create / Edit Slide-Over Drawer (With Module Permission Matrix) */}
+      {/* 3. CRUD Create / Edit Full-Page View Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end">
-          <div className="bg-card border-l border-border-warm p-8 w-full max-w-2xl shadow-2xl h-full flex flex-col justify-between animate-in slide-in-from-right duration-300 overflow-y-auto">
-            <form onSubmit={handleSaveRole} className="flex flex-col gap-6">
-              <header className="border-b border-border-warm pb-3">
-                <h3 className="text-base font-bold text-foreground uppercase tracking-tight">
-                  {editingRole ? "Modify Role Matrix" : "Create New Access Role"}
-                </h3>
-                <p className="text-xs text-foreground/50 uppercase tracking-wider mt-0.5">
-                  Assign modules rights and read/write capabilities
-                </p>
-              </header>
+        <div className="fixed inset-0 z-50 bg-background flex flex-col p-8 overflow-y-auto animate-in fade-in duration-200">
+          <form onSubmit={handleSaveRole} className="max-w-7xl mx-auto w-full flex flex-col gap-6">
+            <header className="border-b border-border-warm pb-5 mb-2 flex items-start justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl border border-border-warm hover:bg-card text-foreground font-semibold text-xs uppercase tracking-wider transition-colors">
+                  ← Back to Roles
+                </button>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-foreground uppercase">
+                    {editingRole ? "Modify Access Role" : "Create New Access Role"}
+                  </h2>
+                  <p className="text-xs text-foreground/50 uppercase tracking-wider mt-0.5">
+                    Assign module permissions and read/write capabilities
+                  </p>
+                </div>
+              </div>
+            </header>
 
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* Left Side: Role Profile Metadata */}
+              <div className="lg:col-span-4 flex flex-col gap-5 bg-card border border-border-warm p-6 rounded-3xl shadow-xs">
+                <h3 className="text-xs font-bold text-foreground/70 uppercase tracking-widest border-b border-border-warm pb-2">Role Profile</h3>
+                
+                <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
+                    <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">
                       Role Name
                     </label>
                     <input
@@ -452,11 +469,12 @@ export default function AdminRolesPage() {
                       value={roleName}
                       onChange={(e) => setRoleName(e.target.value)}
                       placeholder="e.g. Host, Case Supervisor"
-                      className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors placeholder:text-foreground/30"
+                      className="px-3.5 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors placeholder:text-foreground/30 font-semibold"
                     />
                   </div>
+
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
+                    <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">
                       Role Type
                     </label>
                     <select
@@ -465,159 +483,143 @@ export default function AdminRolesPage() {
                         setRoleType(e.target.value as "Internal" | "External");
                         if (e.target.value === "Internal") setRoleEntity("");
                       }}
-                      className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors"
+                      className="px-3.5 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors font-semibold"
                     >
                       <option value="Internal">Internal (SBA Staff)</option>
                       <option value="External">External (Government Partners)</option>
                     </select>
                   </div>
-                </div>
 
-                {roleType === "External" && (
-                  <div className="flex flex-col gap-1.5 mt-2">
-                    <label className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
-                      Assign to Entity
+                  {roleType === "External" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">
+                        Assign to Entity
+                      </label>
+                      <select
+                        required
+                        value={roleEntity}
+                        onChange={(e) => setRoleEntity(e.target.value)}
+                        className="px-3.5 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors font-semibold"
+                      >
+                        <option value="" disabled>Select an Entity...</option>
+                        <option value="Sharjah Health Authority">Sharjah Health Authority</option>
+                        <option value="Sharjah Housing Directorate">Sharjah Housing Directorate</option>
+                        <option value="Ministry of Community Development">Ministry of Community Development</option>
+                        <option value="Sharjah Police General Directorate">Sharjah Police General Directorate</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">
+                      Department
                     </label>
-                    <select
+                    <input
+                      type="text"
                       required
-                      value={roleEntity}
-                      onChange={(e) => setRoleEntity(e.target.value)}
-                      className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors"
-                    >
-                      <option value="" disabled>Select an Entity...</option>
-                      <option value="Sharjah Health Authority">Sharjah Health Authority</option>
-                      <option value="Sharjah Housing Directorate">Sharjah Housing Directorate</option>
-                      <option value="Ministry of Community Development">Ministry of Community Development</option>
-                      <option value="Sharjah Police General Directorate">Sharjah Police General Directorate</option>
-                    </select>
+                      value={roleDept}
+                      onChange={(e) => setRoleDept(e.target.value)}
+                      placeholder="e.g. IT & Administration"
+                      className="px-3.5 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors placeholder:text-foreground/30 font-semibold"
+                    />
                   </div>
-                )}
 
-                <div className="flex flex-col gap-1.5 mt-2">
-                  <label className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
-                    Department
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={roleDept}
-                    onChange={(e) => setRoleDept(e.target.value)}
-                    placeholder="e.g. IT & Administration"
-                    className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors placeholder:text-foreground/30"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
-                    Description
-                  </label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={roleDesc}
-                    onChange={(e) => setRoleDesc(e.target.value)}
-                    placeholder="Define role responsibilities and limitations..."
-                    className="px-3 py-2 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors placeholder:text-foreground/30 resize-none"
-                  />
-                </div>
-
-                {/* Module Permission Matrix Table */}
-                <div className="flex flex-col gap-2 mt-2">
-                  <label className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">
-                    Module Capabilities Matrix
-                  </label>
-                  <div className="border border-border-warm rounded-xl overflow-hidden bg-background/30 text-xs">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-border-warm bg-background/70 text-foreground/60 font-bold uppercase tracking-wider text-left">
-                          <th className="py-3 px-4">System Module</th>
-                          <th className="py-3 px-3 text-center">View</th>
-                          <th className="py-3 px-3 text-center">Add</th>
-                          <th className="py-3 px-3 text-center">Edit</th>
-                          <th className="py-3 px-3 text-center">Delete</th>
-                          <th className="py-3 px-3 text-center">Download</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-warm">
-                        {rolePerms.map((perm, idx) => (
-                          <tr key={perm.moduleName} className="hover:bg-card transition-colors">
-                            <td className="py-2.5 px-4 font-semibold text-foreground/80">{perm.moduleName}</td>
-                            
-                            {/* VIEW Checkbox */}
-                            <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={perm.view}
-                                onChange={() => handlePermissionChange(idx, "view")}
-                                className="w-3.5 h-3.5 accent-gold border-border-warm rounded cursor-pointer"
-                              />
-                            </td>
-
-                            {/* ADD Checkbox */}
-                            <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={perm.add}
-                                onChange={() => handlePermissionChange(idx, "add")}
-                                className="w-3.5 h-3.5 accent-gold border-border-warm rounded cursor-pointer"
-                              />
-                            </td>
-
-                            {/* EDIT Checkbox */}
-                            <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={perm.edit}
-                                onChange={() => handlePermissionChange(idx, "edit")}
-                                className="w-3.5 h-3.5 accent-gold border-border-warm rounded cursor-pointer"
-                              />
-                            </td>
-
-                            {/* DELETE Checkbox */}
-                            <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={perm.delete}
-                                onChange={() => handlePermissionChange(idx, "delete")}
-                                className="w-3.5 h-3.5 accent-gold border-border-warm rounded cursor-pointer"
-                              />
-                            </td>
-
-                            {/* DOWNLOAD Checkbox */}
-                            <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={perm.download}
-                                onChange={() => handlePermissionChange(idx, "download")}
-                                className="w-3.5 h-3.5 accent-gold border-border-warm rounded cursor-pointer"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-widest">
+                      Description
+                    </label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={roleDesc}
+                      onChange={(e) => setRoleDesc(e.target.value)}
+                      placeholder="Define role responsibilities and limitations..."
+                      className="px-3.5 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors placeholder:text-foreground/30 resize-none h-28"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 border-t border-border-warm pt-4 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-border-warm bg-background hover:bg-background/80 text-foreground font-semibold text-xs uppercase tracking-wider transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 rounded-xl bg-gold hover:bg-gold-hover text-white font-semibold text-xs uppercase tracking-wider transition-colors shadow-sm"
-                >
-                  Save Definition
-                </button>
+              {/* Right Side: Grouped Permissions Cards */}
+              <div className="lg:col-span-8 flex flex-col gap-6 bg-card border border-border-warm p-6 rounded-3xl shadow-xs">
+                <div className="flex justify-between items-center border-b border-border-warm pb-2">
+                  <h3 className="text-xs font-bold text-foreground/70 uppercase tracking-widest">Module Capabilities Permissions</h3>
+                  <span className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest">Select capabilities per module</span>
+                </div>
+
+                <div className="flex flex-col gap-6">
+                  {[
+                    {
+                      name: "Core Operations & Broadcast",
+                      modules: ["Executive Command Center", "Live Studio Feed", "Call Screener Desk", "Broadcast Archives", "Smart Search", "Citizen Profiles"]
+                    },
+                    {
+                      name: "Case & SLA Governance",
+                      modules: ["Case Management", "Resolution & Follow-up", "Executive Directives"]
+                    },
+                    {
+                      name: "System Administration & Control",
+                      modules: ["External Entities", "User Access Directory", "Roles & Permissions", "Audit Logs", "AI Agent Settings", "Notification Templates"]
+                    }
+                  ].map(group => (
+                    <div key={group.name} className="flex flex-col gap-3">
+                      <h4 className="text-[10px] font-black text-gold uppercase tracking-widest bg-gold/5 px-3 py-1.5 rounded-lg border border-gold/10 w-fit">
+                        {group.name}
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {group.modules.map(moduleName => {
+                          const idx = rolePerms.findIndex(p => p.moduleName === moduleName);
+                          if (idx === -1) return null;
+                          const perm = rolePerms[idx];
+                          return (
+                            <div key={moduleName} className="bg-background border border-border-warm/60 p-4 rounded-2xl flex flex-col gap-3 shadow-xs hover:border-gold/30 transition-all">
+                              <span className="font-bold text-xs text-foreground/80">{moduleName}</span>
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {(["view", "add", "edit", "delete", "download"] as const).map(cap => (
+                                  <label key={cap} className={`flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg border cursor-pointer transition-all select-none ${
+                                    perm[cap] 
+                                      ? "bg-gold-muted/10 border-gold/55 text-primary-text-gold" 
+                                      : "bg-card/45 border-border-warm/50 text-foreground/50 hover:bg-card hover:border-gold/25"
+                                  }`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={perm[cap]}
+                                      onChange={() => handlePermissionChange(idx, cap)}
+                                      className="w-3 h-3 accent-gold cursor-pointer"
+                                    />
+                                    <span className="text-[8px] font-black uppercase tracking-wider">{cap}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </form>
-          </div>
+
+            </div>
+
+            {/* Action Footer */}
+            <div className="flex justify-end gap-3 border-t border-border-warm pt-5 mt-4 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2.5 rounded-xl border border-border-warm bg-card hover:bg-background/80 text-foreground font-semibold text-xs uppercase tracking-wider transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-gold hover:bg-gold-hover text-white font-semibold text-xs uppercase tracking-wider transition-colors shadow-sm"
+              >
+                Save Role Definition
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

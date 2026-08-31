@@ -86,8 +86,83 @@ export default function ProducerStudioPage() {
   const [ingestChannel, setIngestChannel] = useState("Sharjah TV Live Stream Feed");
   const [complianceProfile, setComplianceProfile] = useState("Executive Directives Tracking");
 
+  // Simulated Broadcast Telemetry States
+  const [telemetryLatency, setTelemetryLatency] = useState("0 ms");
+  const [telemetryPacketLoss, setTelemetryPacketLoss] = useState("0.00%");
+  const [telemetryBitrate, setTelemetryBitrate] = useState("0 kbps");
+  const [telemetryUptime, setTelemetryUptime] = useState(0);
+
+  useEffect(() => {
+    if (!isLive) {
+      setTelemetryLatency("0 ms");
+      setTelemetryPacketLoss("0.00%");
+      setTelemetryBitrate("0 kbps");
+      setTelemetryUptime(0);
+      return;
+    }
+
+    if (activeSource === "RadioAoIP") {
+      setTelemetryBitrate("1,411 kbps (PCM)");
+    } else if (activeSource === "LiveTV") {
+      setTelemetryBitrate("320 kbps (AAC)");
+    } else if (activeSource === "YouTubeLive") {
+      setTelemetryBitrate("256 kbps (AAC)");
+    }
+
+    const interval = setInterval(() => {
+      setTelemetryUptime(prev => prev + 1);
+
+      if (activeSource === "RadioAoIP") {
+        const jitter = (40 + Math.random() * 4).toFixed(1);
+        setTelemetryLatency(`${jitter} ms`);
+      } else if (activeSource === "LiveTV") {
+        const jitter = (1.82 + Math.random() * 0.08).toFixed(2);
+        setTelemetryLatency(`${jitter} s`);
+      } else {
+        setTelemetryLatency("—");
+      }
+
+      const lossProb = Math.random();
+      if (lossProb > 0.95) {
+        setTelemetryPacketLoss((Math.random() * 0.05).toFixed(2) + "%");
+      } else {
+        setTelemetryPacketLoss("0.00%");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLive, activeSource]);
+
+  const formatUptime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${hrs}:${mins}:${secs}`;
+  };
+
   // Language switch toggle state
   const [transcriptLang, setTranscriptLang] = useState<"EN" | "AR">("EN");
+
+  // Producer Notes taking states
+  const [producerNotes, setProducerNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  const handleSaveNotes = () => {
+    if (activeCaller) {
+      activeCaller.notes = producerNotes;
+    }
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 2000);
+  };
+
+  // Sync producerNotes when activeCaller changes
+  useEffect(() => {
+    if (activeCaller) {
+      setProducerNotes(activeCaller.notes || "");
+    } else {
+      setProducerNotes("");
+    }
+  }, [activeCaller]);
 
   // Case Draft Form States
   const [caseTitle, setCaseTitle] = useState("");
@@ -357,17 +432,35 @@ export default function ProducerStudioPage() {
           </section>
 
           {/* Bottom: Notes Taking Box */}
-          {activeSource === "HotLine" && activeCaller && (
+          {isLive && (
             <section className="h-[220px] shrink-0 bg-card border border-border-warm rounded-xl p-5 flex flex-col shadow-[0_2px_8px_rgba(20,19,17,0.02)] animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2">
-                Producer Notes for: <span className="text-primary-text-gold">{activeCaller.fullName}</span>
+              <h2 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2 flex justify-between items-center">
+                <span>
+                  {activeCaller ? (
+                    <>Producer Notes for: <span className="text-primary-text-gold">{activeCaller.fullName}</span></>
+                  ) : (
+                    <>Producer Session Notes</>
+                  )}
+                </span>
+                {notesSaved && (
+                  <span className="text-[9px] text-active-green font-bold uppercase tracking-wider animate-pulse">✓ Saved</span>
+                )}
               </h2>
               <textarea 
+                value={producerNotes}
+                onChange={(e) => setProducerNotes(e.target.value)}
                 className="flex-1 w-full bg-background border border-border-warm rounded-lg p-3 text-sm focus:outline-none focus:border-gold resize-none"
-                placeholder="Type private notes here during the call. These notes will be saved to the citizen's profile automatically when the call ends."
+                placeholder={
+                  activeCaller 
+                    ? "Type private notes here during the call. These notes will be saved to the citizen's profile automatically when the call ends."
+                    : "Type private session notes here during the live broadcast."
+                }
               ></textarea>
               <div className="mt-3 flex justify-end">
-                <button className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm">
+                <button 
+                  onClick={handleSaveNotes}
+                  className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm"
+                >
                   Save Notes
                 </button>
               </div>
@@ -452,7 +545,7 @@ export default function ProducerStudioPage() {
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : activeSource === "YouTubeLive" ? (
                 // YouTube Chat comments feed
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <h3 className="text-xs font-bold text-foreground uppercase tracking-tight mb-2 border-b border-border-warm pb-2 flex justify-between items-center">
@@ -461,7 +554,7 @@ export default function ProducerStudioPage() {
                   </h3>
 
                   {/* YouTube Embed Player */}
-                  {isLive && activeSource === "YouTubeLive" && (
+                  {isLive && (
                     <div className="mb-3 shrink-0 rounded-xl overflow-hidden border border-border-warm bg-black">
                       <iframe 
                         className="w-full h-[150px]" 
@@ -485,6 +578,100 @@ export default function ProducerStudioPage() {
                         </div>
                       ))
                     )}
+                  </div>
+                </div>
+              ) : (
+                // Broadcast Telemetry Panel (LiveTV & RadioAoIP)
+                <div className="flex-1 flex flex-col overflow-hidden justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2 flex justify-between items-center shrink-0">
+                      <span>Broadcast Ingest Telemetry</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-widest ${
+                        isLive 
+                          ? "bg-green-50 text-active-green animate-pulse" 
+                          : "bg-foreground/5 text-foreground/40"
+                      }`}>
+                        {isLive ? "Active Feed" : "Offline"}
+                      </span>
+                    </h3>
+
+                    {/* Audio Levels (VU Meters) */}
+                    <div className="mb-3.5 flex flex-col gap-2 shrink-0">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex justify-between items-center text-[9px] uppercase font-bold text-foreground/50">
+                          <span>Presenter Mic</span>
+                          <span className="font-mono text-[9px]">{isLive ? `${presenterDb} dB` : "-INF"}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden flex">
+                          <div 
+                            className={`h-full transition-all duration-150 ${
+                              presenterDb > -10 ? "bg-red-500" : presenterDb > -20 ? "bg-gold" : "bg-active-green"
+                            }`}
+                            style={{ width: `${isLive ? Math.max(0, Math.min(100, ((presenterDb + 60) / 60) * 100)) : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex justify-between items-center text-[9px] uppercase font-bold text-foreground/50">
+                          <span>Ingest Audio</span>
+                          <span className="font-mono text-[9px]">{isLive ? `${ingestDb} dB` : "-INF"}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden flex">
+                          <div 
+                            className={`h-full transition-all duration-150 ${
+                              ingestDb > -10 ? "bg-red-500" : ingestDb > -20 ? "bg-gold" : "bg-active-green"
+                            }`}
+                            style={{ width: `${isLive ? Math.max(0, Math.min(100, ((ingestDb + 60) / 60) * 100)) : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
+                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Latency Offset</span>
+                        <span className="font-mono font-bold text-[11px] text-foreground mt-0.5 truncate">
+                          {isLive ? telemetryLatency : "—"}
+                        </span>
+                      </div>
+
+                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Packet Loss</span>
+                        <span className={`font-mono font-bold text-[11px] mt-0.5 truncate ${
+                          isLive && parseFloat(telemetryPacketLoss) > 0 ? "text-red-500" : "text-foreground"
+                        }`}>
+                          {isLive ? telemetryPacketLoss : "—"}
+                        </span>
+                      </div>
+
+                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Ingest Bitrate</span>
+                        <span className="font-mono font-bold text-[11px] text-foreground mt-0.5 truncate">
+                          {isLive ? telemetryBitrate : "—"}
+                        </span>
+                      </div>
+
+                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Feed Uptime</span>
+                        <span className="font-mono font-bold text-[11px] text-foreground mt-0.5 truncate">
+                          {isLive ? formatUptime(telemetryUptime) : "00:00:00"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Low-profile Ingest Feed Details Footer */}
+                  <div className="pt-2.5 border-t border-border-warm text-[10px] text-foreground/60 flex flex-col gap-1.5 shrink-0 mt-auto">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold uppercase tracking-wider text-foreground/40 text-[8px]">Endpoint URL:</span>
+                      <span className="font-mono truncate max-w-[220px] text-[10px] text-foreground/75" title={streamUrl}>{streamUrl || "—"}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold uppercase tracking-wider text-foreground/40 text-[8px]">Channel ID:</span>
+                      <span className="truncate max-w-[220px] text-[10px] text-foreground/75" title={ingestChannel}>{ingestChannel || "—"}</span>
+                    </div>
                   </div>
                 </div>
               )}

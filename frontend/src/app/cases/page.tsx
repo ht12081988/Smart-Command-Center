@@ -403,6 +403,20 @@ function SearchParamsHandler({ onAction }: { onAction: (action: string | null, p
   return null;
 }
 
+const ENTITY_DEPARTMENTS: Record<string, string[]> = {
+  "Sharjah Health Authority": ["Medical Approvals", "Patient Affairs", "Hospital Referrals"],
+  "Sharjah Housing Directorate": ["Housing Grants", "Land Allocation", "Finance & Loans"],
+  "Ministry of Community Development": ["Social Aid & Welfare", "Family Care", "Humanitarian Grants"],
+  "Sharjah Police General Directorate": ["Traffic & Licensing", "Community Policing", "Humanitarian Cases Desk"]
+};
+
+const ENTITY_LIAISONS: Record<string, string[]> = {
+  "Sharjah Health Authority": ["Dr. Khalid Al-Qasimi", "Dr. Maryam Al-Mansoori"],
+  "Sharjah Housing Directorate": ["Dr. Khalid M.", "Eng. Ahmed Al-Suwaidi"],
+  "Ministry of Community Development": ["Mariam Al Shamsi", "Hassan Al-Ali"],
+  "Sharjah Police General Directorate": ["Major Salem Al-Suwaidi", "Capt. Ali Al-Ketbi"]
+};
+
 export default function CaseManagementPage() {
   const router = useRouter();
   const [cases, setCases] = useState<Case[]>(MOCK_CASES);
@@ -944,48 +958,106 @@ export default function CaseManagementPage() {
               <div className="border-t border-border-warm pt-4 mt-2">
                 <h3 className="text-xs font-bold text-foreground/80 uppercase tracking-widest mb-4">Stakeholders</h3>
                 
-                <div className="grid grid-cols-1 gap-4 mb-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Case Owner</label>
-                    <input 
-                      readOnly
-                      value={newCaseForm.caseOwner}
-                      className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background/50 text-foreground/70 text-sm focus:outline-none cursor-not-allowed" 
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const isAssigned = newCaseForm.status === "Assigned";
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 gap-4 mb-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Case Owner</label>
+                          <select 
+                            required
+                            value={newCaseForm.caseOwner}
+                            onChange={e => setNewCaseForm({...newCaseForm, caseOwner: e.target.value})}
+                            className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold"
+                          >
+                            <option value="Fatima Al-Suwaidi">Fatima Al-Suwaidi (Producer)</option>
+                            <option value="Maryam Al-Ali">Maryam Al-Ali (Case Manager)</option>
+                            <option value="Layla Al-Mansoori">Layla Al-Mansoori (Executive)</option>
+                            <option value="Hardik T.">Hardik T. (Admin)</option>
+                          </select>
+                        </div>
+                      </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">External Entity</label>
-                    <select value={newCaseForm.externalEntity} onChange={e => setNewCaseForm({...newCaseForm, externalEntity: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold">
-                      <option value="">Select Entity...</option>
-                      <option value="Sharjah Health Authority">Sharjah Health Authority</option>
-                      <option value="Sharjah Housing Directorate">Sharjah Housing Directorate</option>
-                      <option value="Ministry of Community Development">Ministry of Community Development</option>
-                      <option value="Sharjah Police General Directorate">Sharjah Police General Directorate</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Entity Department</label>
-                    <input 
-                      value={newCaseForm.entityDepartment} 
-                      onChange={e => setNewCaseForm({...newCaseForm, entityDepartment: e.target.value})} 
-                      className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold" 
-                      placeholder="e.g. Medical Approvals" 
-                    />
-                  </div>
-                </div>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-widest mb-2 ${isAssigned ? "text-red-600" : "text-foreground/60"}`}>
+                            External Entity {isAssigned && "*"}
+                          </label>
+                          <select 
+                            required={isAssigned}
+                            value={newCaseForm.externalEntity} 
+                            onChange={e => {
+                              const entity = e.target.value;
+                              const defaultDept = ENTITY_DEPARTMENTS[entity]?.[0] || "";
+                              const defaultLiaison = ENTITY_LIAISONS[entity]?.[0] || "";
+                              setNewCaseForm({
+                                ...newCaseForm, 
+                                externalEntity: entity, 
+                                entityDepartment: defaultDept,
+                                liaisonOfficer: defaultLiaison
+                              });
+                            }} 
+                            className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${isAssigned && !newCaseForm.externalEntity ? "border-red-300 focus:border-red-500" : "border-border-warm"}`}
+                          >
+                            <option value="">Select Entity...</option>
+                            <option value="Sharjah Health Authority">Sharjah Health Authority</option>
+                            <option value="Sharjah Housing Directorate">Sharjah Housing Directorate</option>
+                            <option value="Ministry of Community Development">Ministry of Community Development</option>
+                            <option value="Sharjah Police General Directorate">Sharjah Police General Directorate</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase tracking-widest mb-2 ${isAssigned ? "text-red-600" : "text-foreground/60"}`}>
+                            Entity Department {isAssigned && "*"}
+                          </label>
+                          <select 
+                            required={isAssigned}
+                            value={newCaseForm.entityDepartment} 
+                            onChange={e => setNewCaseForm({...newCaseForm, entityDepartment: e.target.value})} 
+                            className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${isAssigned && !newCaseForm.entityDepartment ? "border-red-300 focus:border-red-500" : "border-border-warm"}`}
+                            disabled={!newCaseForm.externalEntity}
+                          >
+                            {!newCaseForm.externalEntity ? (
+                              <option value="">Select Entity First...</option>
+                            ) : (
+                              <>
+                                <option value="">Select Department...</option>
+                                {ENTITY_DEPARTMENTS[newCaseForm.externalEntity]?.map(dept => (
+                                  <option key={dept} value={dept}>{dept}</option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Liaison Officer</label>
-                  <input 
-                    value={newCaseForm.liaisonOfficer} 
-                    onChange={e => setNewCaseForm({...newCaseForm, liaisonOfficer: e.target.value})} 
-                    className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold" 
-                    placeholder="e.g. Dr. Khalid Al-Qasimi" 
-                  />
-                </div>
+                      <div>
+                        <label className={`block text-[10px] font-bold uppercase tracking-widest mb-2 ${isAssigned ? "text-red-600" : "text-foreground/60"}`}>
+                          Liaison Officer {isAssigned && "*"}
+                        </label>
+                        <select 
+                          required={isAssigned}
+                          value={newCaseForm.liaisonOfficer} 
+                          onChange={e => setNewCaseForm({...newCaseForm, liaisonOfficer: e.target.value})} 
+                          className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${isAssigned && !newCaseForm.liaisonOfficer ? "border-red-300 focus:border-red-500" : "border-border-warm"}`}
+                          disabled={!newCaseForm.externalEntity}
+                        >
+                          {!newCaseForm.externalEntity ? (
+                            <option value="">Select Entity First...</option>
+                          ) : (
+                            <>
+                              <option value="">Select Liaison Officer...</option>
+                              {ENTITY_LIAISONS[newCaseForm.externalEntity]?.map(officer => (
+                                <option key={officer} value={officer}>{officer}</option>
+                              ))}
+                            </>
+                          )}
+                        </select>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <div>
@@ -1009,6 +1081,36 @@ export default function CaseManagementPage() {
   );
 }
 
+const TAB_PERMISSIONS: Record<string, {
+  allowedTabs: string[];
+  canChangeStatus: boolean;
+}> = {
+  Administrator: {
+    allowedTabs: ["overview", "directive", "archive", "tasks", "timeline", "documents", "closure"],
+    canChangeStatus: true
+  },
+  CaseManager: {
+    allowedTabs: ["overview", "directive", "tasks", "timeline", "documents", "closure"],
+    canChangeStatus: true
+  },
+  Producer: {
+    allowedTabs: ["overview", "directive", "archive", "tasks", "documents"],
+    canChangeStatus: true
+  },
+  SBAExecutive: {
+    allowedTabs: ["overview", "directive", "archive", "timeline", "closure"],
+    canChangeStatus: false
+  },
+  Presenter: {
+    allowedTabs: ["overview", "archive"],
+    canChangeStatus: false
+  },
+  ExternalLiaison: {
+    allowedTabs: ["overview", "timeline"],
+    canChangeStatus: false
+  }
+};
+
 export function CaseDetailWorkspace({ 
   activeCase, 
   onClose,
@@ -1020,7 +1122,22 @@ export function CaseDetailWorkspace({
   onUpdateCase: (updatedCase: Case) => void,
   onUpdateStatus: (status: CaseStatus, comment: string) => void
 }) {
+  const { user } = useAuth();
+  
+  const roleRules = TAB_PERMISSIONS[user?.role || "ExternalLiaison"] || TAB_PERMISSIONS["ExternalLiaison"];
+  const allowedTabs = roleRules.allowedTabs;
+  const canChangeStatus = roleRules.canChangeStatus;
+
   const [activeTab, setActiveTab] = useState<"overview" | "directive" | "archive" | "tasks" | "timeline" | "documents" | "closure">("overview");
+
+  useEffect(() => {
+    if (user?.role) {
+      const allowed = TAB_PERMISSIONS[user.role]?.allowedTabs || ["overview"];
+      if (!allowed.includes(activeTab)) {
+        setActiveTab(allowed[0] as any);
+      }
+    }
+  }, [user, activeTab]);
   
   const linkedDirective = MOCK_DIRECTIVES.find(d => d.linkedCaseId === activeCase.id) || 
     (activeCase.feedSource === "Executive Directive" ? MOCK_DIRECTIVES[0] : null);
@@ -1031,6 +1148,24 @@ export function CaseDetailWorkspace({
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState<CaseStatus>(activeCase.status);
   const [statusComment, setStatusComment] = useState("");
+  
+  // Temp External Routing States for status changes
+  const [tempExternalEntity, setTempExternalEntity] = useState(activeCase.externalEntity || "");
+  const [tempEntityDepartment, setTempEntityDepartment] = useState(activeCase.entityDepartment || "");
+  const [tempLiaisonOfficer, setTempLiaisonOfficer] = useState(activeCase.liaisonOfficer || "");
+  
+  // Attached Proof File state
+  const [attachedFile, setAttachedFile] = useState<string>("");
+
+  useEffect(() => {
+    if (showStatusModal) {
+      setNewStatus(activeCase.status);
+      setTempExternalEntity(activeCase.externalEntity || "");
+      setTempEntityDepartment(activeCase.entityDepartment || "");
+      setTempLiaisonOfficer(activeCase.liaisonOfficer || "");
+      setAttachedFile("");
+    }
+  }, [showStatusModal, activeCase]);
 
   // Create Task Drawer State
   const [showCreateTaskDrawer, setShowCreateTaskDrawer] = useState(false);
@@ -1077,7 +1212,50 @@ export function CaseDetailWorkspace({
 
   const handleStatusSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateStatus(newStatus, statusComment);
+
+    const isAssigned = newStatus === "Assigned";
+    const isResolvedOrClosed = newStatus === "Resolved" || newStatus === "Closed";
+
+    // 1. Build the timeline event
+    const newEvent: TimelineEvent = {
+      id: `TL-${Math.floor(Math.random() * 1000)}`,
+      action: `Status changed to ${newStatus}`,
+      actor: "Current User",
+      date: new Date().toLocaleString(),
+      comment: statusComment || "No comment provided."
+    };
+
+    // 2. Prepare the updated case object
+    const updatedCase: Case = {
+      ...activeCase,
+      status: newStatus,
+      timeline: [...activeCase.timeline, newEvent]
+    };
+
+    // 3. Conditionally attach external routing details
+    if (isAssigned) {
+      updatedCase.externalEntity = tempExternalEntity;
+      updatedCase.entityDepartment = tempEntityDepartment;
+      updatedCase.liaisonOfficer = tempLiaisonOfficer;
+    }
+
+    // 4. Conditionally attach proof of resolution document
+    if (isResolvedOrClosed) {
+      updatedCase.outcome = statusComment || "Resolution applied successfully.";
+      updatedCase.resolutionClassification = "Successful Resolution";
+      
+      if (attachedFile) {
+        const docObj = {
+          id: `DOC-${Math.floor(Math.random() * 1000)}`,
+          title: attachedFile,
+          type: "Proof of Resolution",
+          dateAdded: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        };
+        updatedCase.documents = [...(updatedCase.documents || []), docObj];
+      }
+    }
+
+    onUpdateCase(updatedCase);
     setShowStatusModal(false);
     setStatusComment("");
   };
@@ -1152,9 +1330,15 @@ export function CaseDetailWorkspace({
         
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 rounded-xl border border-border-warm bg-card hover:border-gold font-bold text-[10px] uppercase tracking-wider transition-colors">
-            Update Status
-          </button>
+          {canChangeStatus ? (
+            <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 rounded-xl border border-border-warm bg-card hover:border-gold font-bold text-[10px] uppercase tracking-wider transition-colors">
+              Update Status
+            </button>
+          ) : (
+            <button disabled className="px-4 py-2 rounded-xl border border-border-warm bg-foreground/5 text-foreground/30 font-bold text-[10px] uppercase tracking-wider cursor-not-allowed">
+              Status Locked
+            </button>
+          )}
           <button className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider shadow-sm transition-colors">
             Edit Case Info
           </button>
@@ -1174,7 +1358,7 @@ export function CaseDetailWorkspace({
             { id: "timeline", label: "Activity Timeline" },
             { id: "documents", label: `Documents (${activeCase.documents.length})` },
             { id: "closure", label: "Outcome & Closure" },
-          ].filter(Boolean).map(tab => (
+          ].filter(Boolean).filter(tab => allowedTabs.includes(tab!.id)).map(tab => (
             <button 
               key={tab!.id}
               onClick={() => setActiveTab(tab!.id as any)} 
@@ -1603,6 +1787,83 @@ export function CaseDetailWorkspace({
                   <option value="Reopened">Reopened</option>
                 </select>
               </div>
+
+              {/* Dynamic External Entity Routing dropdowns if status is set to Assigned */}
+              {newStatus === "Assigned" && (
+                <div className="bg-background/50 p-4 rounded-xl border border-border-warm flex flex-col gap-4">
+                  <h4 className="text-[10px] font-bold text-red-600 uppercase tracking-widest border-b border-border-warm pb-1 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    Required External Entity Routing
+                  </h4>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-foreground/60 uppercase tracking-widest">External Entity *</label>
+                    <select 
+                      required 
+                      value={tempExternalEntity} 
+                      onChange={e => {
+                        const entity = e.target.value;
+                        const defaultDept = ENTITY_DEPARTMENTS[entity]?.[0] || "";
+                        const defaultLiaison = ENTITY_LIAISONS[entity]?.[0] || "";
+                        setTempExternalEntity(entity);
+                        setTempEntityDepartment(defaultDept);
+                        setTempLiaisonOfficer(defaultLiaison);
+                      }} 
+                      className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${!tempExternalEntity ? "border-red-300" : "border-border-warm"}`}
+                    >
+                      <option value="">Select Entity...</option>
+                      <option value="Sharjah Health Authority">Sharjah Health Authority</option>
+                      <option value="Sharjah Housing Directorate">Sharjah Housing Directorate</option>
+                      <option value="Ministry of Community Development">Ministry of Community Development</option>
+                      <option value="Sharjah Police General Directorate">Sharjah Police General Directorate</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-foreground/60 uppercase tracking-widest">Entity Department *</label>
+                    <select 
+                      required 
+                      value={tempEntityDepartment} 
+                      onChange={e => setTempEntityDepartment(e.target.value)} 
+                      className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${!tempEntityDepartment ? "border-red-300" : "border-border-warm"}`}
+                      disabled={!tempExternalEntity}
+                    >
+                      {!tempExternalEntity ? (
+                        <option value="">Select Entity First...</option>
+                      ) : (
+                        <>
+                          <option value="">Select Department...</option>
+                          {ENTITY_DEPARTMENTS[tempExternalEntity]?.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-foreground/60 uppercase tracking-widest">Liaison Officer *</label>
+                    <select 
+                      required 
+                      value={tempLiaisonOfficer} 
+                      onChange={e => setTempLiaisonOfficer(e.target.value)} 
+                      className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${!tempLiaisonOfficer ? "border-red-300" : "border-border-warm"}`}
+                      disabled={!tempExternalEntity}
+                    >
+                      {!tempExternalEntity ? (
+                        <option value="">Select Entity First...</option>
+                      ) : (
+                        <>
+                          <option value="">Select Liaison Officer...</option>
+                          {ENTITY_LIAISONS[tempExternalEntity]?.map(o => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
               
               <div>
                 <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Status Change Comment (Required for Timeline)</label>
@@ -1616,17 +1877,37 @@ export function CaseDetailWorkspace({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Attach File (Optional)</label>
+                <label className={`block text-[10px] font-bold uppercase tracking-widest mb-2 ${(newStatus === "Resolved" || newStatus === "Closed") ? "text-red-600" : "text-foreground/60"}`}>
+                  Attach Proof of Resolution {(newStatus === "Resolved" || newStatus === "Closed") && "*"}
+                </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-border-warm border-dashed rounded-xl cursor-pointer bg-background hover:bg-foreground/5 hover:border-gold transition-colors">
+                  <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer bg-background hover:bg-foreground/5 hover:border-gold transition-colors ${
+                    (newStatus === "Resolved" || newStatus === "Closed") && !attachedFile ? "border-red-300 hover:border-red-400" : "border-border-warm"
+                  }`}>
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <svg className="w-8 h-8 mb-3 text-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <p className="mb-2 text-xs text-foreground/60"><span className="font-bold">Click to upload</span> or drag and drop</p>
-                      <p className="text-[10px] text-foreground/40">SVG, PNG, JPG or PDF (MAX. 10MB)</p>
+                      {attachedFile ? (
+                        <p className="text-xs font-bold text-active-green">✓ {attachedFile}</p>
+                      ) : (
+                        <>
+                          <p className="mb-2 text-xs text-foreground/60"><span className="font-bold">Click to upload</span> or drag and drop</p>
+                          <p className="text-[10px] text-foreground/40">SVG, PNG, JPG or PDF (MAX. 10MB)</p>
+                        </>
+                      )}
                     </div>
-                    <input type="file" className="hidden" />
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      required={(newStatus === "Resolved" || newStatus === "Closed")}
+                      onChange={e => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          setAttachedFile(files[0].name);
+                        }
+                      }}
+                    />
                   </label>
                 </div>
               </div>

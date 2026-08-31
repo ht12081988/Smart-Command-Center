@@ -94,6 +94,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       )
     },
     {
+      name: "Executive Directives",
+      href: "/directives",
+      icon: (
+        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.242.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.971-2.883a1 1 0 00-1.176 0l-3.97 2.883c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118L2.98 12.08c-.783-.57-.384-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>
+      )
+    },
+    {
       name: "Case Management",
       href: "/cases",
       icon: (
@@ -108,15 +117,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       icon: (
         <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
-    },
-    {
-      name: "Executive Directives",
-      href: "/directives",
-      icon: (
-        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.242.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.971-2.883a1 1 0 00-1.176 0l-3.97 2.883c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118L2.98 12.08c-.783-.57-.384-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
         </svg>
       )
     },
@@ -165,6 +165,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       )
+    },
+    {
+      name: "Notification Templates",
+      href: "/admin/templates",
+      icon: (
+        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      )
     }
   ];
 
@@ -184,7 +193,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       "User Access Directory",
       "Roles & Permissions",
       "Audit Logs",
-      "AI Agent Settings"
+      "AI Agent Settings",
+      "Notification Templates"
     ],
     SBAExecutive: [
       "Executive Command Center",
@@ -210,7 +220,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       "Citizen Profiles",
       "Case Management",
       "Resolution & Follow-up",
-      "Executive Directives"
+      "Executive Directives",
+      "Notification Templates"
     ],
     ExternalLiaison: [
       "Resolution & Follow-up"
