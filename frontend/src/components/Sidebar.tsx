@@ -227,11 +227,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       "Resolution & Follow-up"
     ]
   };
+  const SECTIONS = [
+    {
+      title: "Executive Analytics",
+      items: ["Executive Command Center"]
+    },
+    {
+      title: "Studio Operations",
+      items: ["Live Studio Feed", "Call Screener Desk", "Broadcast Archives"]
+    },
+    {
+      title: "Intake & Search",
+      items: ["Smart Search", "Citizen Profiles"]
+    },
+    {
+      title: "Case Governance",
+      items: ["Executive Directives", "Case Management", "Resolution & Follow-up"]
+    },
+    {
+      title: "Administration",
+      items: [
+        "External Entities",
+        "User Access Directory",
+        "Roles & Permissions",
+        "Notification Templates",
+        "AI Agent Settings",
+        "Audit Logs"
+      ]
+    }
+  ];
 
-  const permittedItems = navItems.filter((item) => {
-    const allowed = ROLE_PERMISSIONS[user.role] || [];
-    return allowed.includes(item.name);
-  });
+  const allowedItems = ROLE_PERMISSIONS[user.role] || [];
+  
+  const groupedSections = SECTIONS.map(sec => ({
+    ...sec,
+    items: navItems.filter(item => sec.items.includes(item.name) && allowedItems.includes(item.name))
+  })).filter(sec => sec.items.length > 0);
 
   return (
     <aside
@@ -260,6 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
         {/* Collapse toggle button arrow */}
         <button
           onClick={toggleSidebar}
+          type="button"
           className="p-1.5 rounded hover:bg-white/5 hover:text-white transition-colors"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
@@ -276,31 +308,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
       </div>
 
       {/* Navigation list */}
-      <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1 text-[13px] font-medium">
-        {permittedItems.map((item, idx) => {
-          const isActive = activeItem ? activeItem === item.name : pathname === item.href;
-          return (
-            <a
-              key={idx}
-              href={item.href}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                isActive
-                  ? "text-gold bg-gold-muted font-semibold"
-                  : "hover:text-white hover:bg-white/5"
-              }`}
-              title={isCollapsed ? item.name : undefined}
-            >
-              {isActive && (
-                <span className="absolute left-[-12px] top-0 bottom-0 w-[4px] bg-active-cyan rounded-r"></span>
-              )}
-              {item.icon}
-              {!isCollapsed && <span className="animate-in fade-in duration-200">{item.name}</span>}
-            </a>
-          );
-        })}
-      </nav>
-
-      {/* User Profile */}
+      <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-5 text-[13px] font-medium">
+        {groupedSections.map((section, secIdx) => (
+          <div key={secIdx} className="flex flex-col gap-1">
+            {!isCollapsed && (
+              <span className="px-3 text-[9px] font-bold uppercase tracking-wider text-gold/65 mb-1.5 block animate-in fade-in duration-200">
+                {section.title}
+              </span>
+            )}
+            {section.items.map((item, idx) => {
+              const isActive = activeItem ? activeItem === item.name : pathname === item.href;
+              return (
+                <a
+                  key={idx}
+                  href={item.href}
+                  className={`relative flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
+                    isActive
+                      ? "text-gold bg-gold-muted font-semibold"
+                      : "hover:text-white hover:bg-white/5"
+                  }`}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  {isActive && (
+                    <span className="absolute left-[-12px] top-0 bottom-0 w-[4px] bg-active-cyan rounded-r"></span>
+                  )}
+                  {item.icon}
+                  {!isCollapsed && <span className="animate-in fade-in duration-200">{item.name}</span>}
+                </a>
+              );
+            })}
+          </div>
+        ))}
+      </nav>      {/* User Profile */}
       <div className="shrink-0 flex flex-col border-t border-white/5 bg-black/10">
         {/* User Card info block */}
         <div className={`p-4 flex items-center justify-between ${isCollapsed ? "flex-col gap-3 p-3" : ""}`}>
