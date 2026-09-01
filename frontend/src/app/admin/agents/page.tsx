@@ -35,7 +35,7 @@ export default function AIAgentsConfigPage() {
   // Redirect if not Administrator (or check permissions dynamically)
   useEffect(() => {
     if (user && user.role !== "Administrator") {
-      router.push("/executive");
+      router.push("/executive/ingestion");
     }
   }, [user, router]);
 

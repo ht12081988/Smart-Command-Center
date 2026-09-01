@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "../../../components/Sidebar";
 import { PortalHeader } from "../../../components/PortalHeader";
 import { useBroadcast, BroadcastSource, ScreenerTicket } from "../../../context/BroadcastContext";
@@ -20,7 +20,7 @@ const COMPLIANCE_PROFILES = [
   "General Public Feedback Auditing"
 ];
 
-export default function ProducerStudioPage() {
+function ProducerStudioPageContent() {
   const {
     activeSource,
     switchSource,
@@ -44,15 +44,47 @@ export default function ProducerStudioPage() {
   // Drawers States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
+  const [isTelemetryDrawerOpen, setIsTelemetryDrawerOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState("");
   
-  // Right Panel Tabs
-  const [rightPanelTab, setRightPanelTab] = useState<"prompts" | "directives">("prompts");
+  // Right Panel Tabs Split (Upper & Lower sections)
+  const [upperPanelTab, setUpperPanelTab] = useState<"transcript" | "directives" | "chat" | "queue" | "telemetry">("transcript");
+  const [lowerPanelTab, setLowerPanelTab] = useState<"prompts" | "notes">("prompts");
   
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Demo auto-trigger sequence
+  useEffect(() => {
+    const isDemo = searchParams.get("demo") === "true";
+    const isDemoHotline = searchParams.get("demo_hotline") === "true";
+    
+    if (isDemo && !isLive) {
+      switchSource("YouTubeLive");
+      goOnAirStream();
+      setUpperPanelTab("transcript");
+      setLowerPanelTab("prompts");
+    } else if (isDemoHotline && !isLive) {
+      switchSource("HotLine");
+      // Find or fall back to default mock caller
+      const mockCaller = callerQueue[0] || {
+        id: "caller-mock-1",
+        fullName: "Salem Al-Ketbi",
+        email: "salem.alketbi@example.ae",
+        mobile: "+971-50-1234567",
+        category: "Housing Allocation",
+        region: "Eastern Region (Khorfakkan)",
+        notes: "Requesting updates regarding housing allotment application submitted in Jan 2025. Family currently living in a high-rent apartment."
+      };
+      goOnAir(mockCaller);
+      setUpperPanelTab("transcript");
+      setLowerPanelTab("prompts");
+    }
+  }, [searchParams, isLive]);
+
 
   // Simulated live VU volume level states
   const [presenterDb, setPresenterDb] = useState(-60);
@@ -82,7 +114,7 @@ export default function ProducerStudioPage() {
 
   // Ingest Config Form States
   const [tempSource, setTempSource] = useState<BroadcastSource>("YouTubeLive");
-  const [streamUrl, setStreamUrl] = useState("https://www.youtube.com/watch?v=jfKfPfyJRdk");
+  const [streamUrl, setStreamUrl] = useState("https://www.youtube.com/watch?v=wWYK6IVszPk");
   const [ingestChannel, setIngestChannel] = useState("Sharjah TV Live Stream Feed");
   const [complianceProfile, setComplianceProfile] = useState("Executive Directives Tracking");
 
@@ -176,7 +208,7 @@ export default function ProducerStudioPage() {
   const handleTempSourceChange = (src: BroadcastSource) => {
     setTempSource(src);
     if (src === "YouTubeLive") {
-      setStreamUrl("https://www.youtube.com/watch?v=jfKfPfyJRdk");
+      setStreamUrl("https://www.youtube.com/watch?v=wWYK6IVszPk");
       setIngestChannel("Sharjah TV Live Stream Feed");
     } else if (src === "LiveTV") {
       setStreamUrl("rtmp://broadcast.sba.gov.ae/live/sharjah_tv");
@@ -197,8 +229,9 @@ export default function ProducerStudioPage() {
   };
 
   const handleOpenConfigClick = () => {
-    setTempSource(activeSource);
-    handleTempSourceChange(activeSource);
+    const defaultSrc = isLive ? activeSource : "YouTubeLive";
+    setTempSource(defaultSrc);
+    handleTempSourceChange(defaultSrc);
     setIsConfigDrawerOpen(true);
   };
 
@@ -206,6 +239,7 @@ export default function ProducerStudioPage() {
     e.preventDefault();
     setIsConfigDrawerOpen(false);
     switchSource(tempSource);
+    setUpperPanelTab("transcript");
     if (tempSource !== "HotLine") {
       // Stream sources trigger automatic transcription feed
       // Wrap in small timeout to ensure switchSource completes context state update
@@ -291,7 +325,7 @@ export default function ProducerStudioPage() {
                 {isLive && activeSource === "RadioAoIP" && "📻 Ingest: Radio AoIP Stream"}
               </span>
 
-              {isLive && (
+              {isLive && activeSource !== "YouTubeLive" && (
                 <div className="hidden xl:flex items-center gap-4 bg-background border border-border-warm rounded-xl px-3 py-1.5 shadow-2xs">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Presenter Mic</span>
@@ -333,17 +367,31 @@ export default function ProducerStudioPage() {
                 </div>
               )}
 
+              {/* Telemetry Icon Button */}
+              <button
+                onClick={() => setIsTelemetryDrawerOpen(true)}
+                className="flex items-center justify-center w-9 h-9 bg-card hover:bg-gold-muted/40 border border-border-warm hover:border-gold rounded-xl transition-colors shadow-2xs cursor-pointer"
+                title="View Telemetry & Signal Lock"
+              >
+                <div className="relative flex items-center justify-center">
+                  <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full border border-card ${isLive ? "bg-green-500 animate-pulse" : "bg-foreground/30"}`} />
+                </div>
+              </button>
+
               {!isLive ? (
                 <button
                   onClick={handleOpenConfigClick}
-                  className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap"
+                  className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Connect Ingest Feed
                 </button>
               ) : (
                 <button
                   onClick={handleDisconnectClick}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap"
+                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Disconnect Feed
                 </button>
@@ -351,438 +399,588 @@ export default function ProducerStudioPage() {
             </div>
           }
         />
+        {!isLive ? (
+          <main className="flex-1 p-6 flex flex-col items-center justify-center bg-background/50">
+            <div className="max-w-lg w-full bg-card border border-border-warm rounded-3xl p-10 flex flex-col items-center text-center shadow-md animate-in fade-in zoom-in duration-300">
+              <div className="w-20 h-20 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold mb-6 shadow-xs">
+                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
 
-        <main className="flex-1 p-6 md:p-8 flex flex-col gap-6 overflow-hidden max-h-screen">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/50 bg-foreground/5 px-3.5 py-1 rounded-full border border-border-warm mb-3.5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-foreground/30" />
+                System Standby (Offline)
+              </span>
+
+              <h2 className="text-xl font-black text-foreground uppercase tracking-tight mb-2">
+                No Ingest Feed Connected
+              </h2>
+
+              <p className="text-xs text-foreground/60 leading-relaxed mb-6 max-w-sm">
+                No active broadcast or hotline feed is currently ingested. Connect an ingest feed to enable real-time STT transcription, caller queue management, and AI directive extraction.
+              </p>
+
+              <button
+                onClick={handleOpenConfigClick}
+                className="bg-gold hover:bg-gold-hover text-white px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md transition-all flex items-center gap-2 hover:scale-[1.02] cursor-pointer"
+              >
+                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Connect Ingest Feed
+              </button>
+            </div>
+          </main>
+        ) : (
+          <main className="flex-1 p-2 md:p-3 flex flex-col gap-3 overflow-hidden max-h-screen">
+            <style>{`
+              .custom-kanban-scrollbar::-webkit-scrollbar {
+                width: 5px;
+                height: 5px;
+              }
+              .custom-kanban-scrollbar::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              .custom-kanban-scrollbar::-webkit-scrollbar-thumb {
+                background: rgba(188, 147, 90, 0.25);
+                border-radius: 99px;
+              }
+              .custom-kanban-scrollbar:hover::-webkit-scrollbar-thumb {
+                background: rgba(188, 147, 90, 0.55);
+              }
+            `}</style>
 
         {/* Workspace Layout Grid */}
-        <div className="flex-1 grid grid-cols-3 gap-6 overflow-hidden">
+        <div className="flex-1 grid grid-cols-12 gap-3 overflow-hidden">
           
-          {/* LEFT: Transcript and Notes Column */}
-          <div className="col-span-2 flex flex-col gap-6 overflow-hidden">
+          {/* LEFT: Main Player / Hotline Deck Column (7 cols / ~58% width) */}
+          <div className="col-span-7 flex flex-col gap-3 h-full overflow-hidden justify-center">
 
-            {/* Top: Real-time editable transcript board */}
-            <section className="flex-1 bg-card border border-border-warm rounded-xl p-5 flex flex-col overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)] min-h-[300px]">
-            <h2 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2 flex items-center justify-between">
-              <span>Speech-to-Text Live Transcript (Interactive Editor)</span>
-              <div className="flex items-center gap-3">
-                {/* Language Toggler */}
-                <div className="flex bg-background border border-border-warm rounded-lg p-0.5 text-[9.5px] font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setTranscriptLang("EN")}
-                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${transcriptLang === "EN" ? "bg-gold text-white" : "text-foreground/50 hover:text-foreground"}`}
-                  >
-                    EN
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTranscriptLang("AR")}
-                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${transcriptLang === "AR" ? "bg-gold text-white" : "text-foreground/50 hover:text-foreground"}`}
-                  >
-                    AR
-                  </button>
-                </div>
-                <span className="bg-gold-muted text-gold text-[9px] px-1.5 py-0.5 rounded border border-gold/10 font-bold">
-                  EDITABLE FEED
-                </span>
-              </div>
-            </h2>
-
-            <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
-              {editableTranscripts.length === 0 ? (
-                <div className="h-full flex flex-col justify-center items-center text-center text-foreground/45">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide">Awaiting show start...</span>
-                </div>
-              ) : (
-                editableTranscripts.map((line, idx) => {
-                  const isHost = line.speaker.toUpperCase() === "HOST";
-                  return (
-                    <div 
-                      key={idx}
-                      className={`flex w-full ${isHost ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className={`flex flex-col gap-1.5 p-3 rounded-2xl border w-full shadow-sm ${
-                        isHost 
-                          ? "border-green-200 bg-green-50 rounded-tr-sm" 
-                          : "border-border-warm bg-background rounded-tl-sm"
-                      }`}>
-                        <div className={`flex items-center gap-6 ${isHost ? "justify-end flex-row-reverse" : "justify-between"}`}>
-                          <span className={`text-[9px] font-bold uppercase tracking-wider ${isHost ? "text-green-700" : "text-foreground/50"}`}>
-                            {line.speaker}
-                          </span>
-                          <span className={`text-[9px] ${isHost ? "text-green-700/60" : "text-foreground/40"}`}>{line.timestamp}</span>
-                        </div>
-                        {/* Live editable text area for correcting transcript errors */}
-                        <input
-                          type="text"
-                          value={transcriptLang === "AR" ? (line.textAr || line.text) : line.text}
-                          onChange={(e) => handleTranscriptTextChange(idx, e.target.value)}
-                          className={`w-full border border-transparent focus:outline-none rounded px-2 py-1.5 text-sm transition-all ${
-                            isHost ? "bg-white/60 text-green-950 hover:border-green-300 focus:border-green-500" : "bg-card text-foreground hover:border-border-warm focus:border-gold"
-                          }`}
-                          dir={transcriptLang === "AR" ? "rtl" : "ltr"}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={transcriptEndRef} />
-            </div>
-          </section>
-
-          {/* Bottom: Notes Taking Box */}
-          {isLive && (
-            <section className="h-[220px] shrink-0 bg-card border border-border-warm rounded-xl p-5 flex flex-col shadow-[0_2px_8px_rgba(20,19,17,0.02)] animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2 flex justify-between items-center">
-                <span>
-                  {activeCaller ? (
-                    <>Producer Notes for: <span className="text-primary-text-gold">{activeCaller.fullName}</span></>
-                  ) : (
-                    <>Producer Session Notes</>
-                  )}
-                </span>
-                {notesSaved && (
-                  <span className="text-[9px] text-active-green font-bold uppercase tracking-wider animate-pulse">✓ Saved</span>
-                )}
-              </h2>
-              <textarea 
-                value={producerNotes}
-                onChange={(e) => setProducerNotes(e.target.value)}
-                className="flex-1 w-full bg-background border border-border-warm rounded-lg p-3 text-sm focus:outline-none focus:border-gold resize-none"
-                placeholder={
-                  activeCaller 
-                    ? "Type private notes here during the call. These notes will be saved to the citizen's profile automatically when the call ends."
-                    : "Type private session notes here during the live broadcast."
-                }
-              ></textarea>
-              <div className="mt-3 flex justify-end">
-                <button 
-                  onClick={handleSaveNotes}
-                  className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm"
-                >
-                  Save Notes
-                </button>
-              </div>
-            </section>
-          )}
-
-        </div>
-
-          {/* RIGHT: Queue monitor / Directives and action box */}
-          <section className="col-span-1 flex flex-col gap-5 overflow-hidden">
-            
-            {/* Source-specific Queue Panel */}
-            <div className="bg-card border border-border-warm rounded-xl p-5 shadow-[0_2px_8px_rgba(20,19,17,0.02)] flex-1 overflow-hidden flex flex-col">
-              {activeSource === "HotLine" ? (
-                // Hotline queue
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <h3 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2 flex justify-between items-center">
-                    <span>Screener Queue</span>
-                    <span className="bg-foreground/5 text-foreground/60 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                      {callerQueue.length} WAITING
-                    </span>
-                  </h3>
-                  
-                  <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {callerQueue.length === 0 ? (
-                      <span className="text-foreground/40 text-[10px] text-center my-auto">No screened calls in queue</span>
-                    ) : (
-                      callerQueue.map((caller) => (
-                        <div 
-                          key={caller.id}
-                          className={`p-3 border rounded-xl flex items-center justify-between gap-3 transition-colors ${
-                            activeCaller?.id === caller.id 
-                              ? "bg-gold-muted border-gold/40 text-foreground" 
-                              : "bg-background border-border-warm hover:border-gold/30"
-                          }`}
-                        >
-                          <div>
-                            <span className="font-bold text-xs text-primary-text-gold block">{caller.fullName}</span>
-                            <span className="text-[9px] text-foreground/50">{caller.region}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => goOnAir(caller)}
-                              disabled={isLive && activeCaller?.id === caller.id}
-                              className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                                activeCaller?.id === caller.id
-                                  ? "bg-active-green text-white cursor-default"
-                                  : "bg-gold hover:bg-gold-hover text-white"
-                              }`}
-                            >
-                              {activeCaller?.id === caller.id ? "On Air" : "PATCH IN"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeFromQueue(caller.id)}
-                              className="p-1 text-foreground/40 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                              title="Remove caller from queue"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Past Cases Section for Active Caller */}
-                  {activeCaller && priorCaseMatch && (
-                    <div className="mt-4 pt-4 border-t border-border-warm flex flex-col gap-2 shrink-0">
-                      <h4 className="text-[10px] font-bold text-foreground/70 uppercase tracking-widest flex items-center gap-1.5">
-                        <span className="text-gold">◷</span> Prior Case History
-                      </h4>
-                      <div className="bg-foreground/5 border border-border-warm rounded-lg p-2.5 text-xs">
-                        <span className="font-semibold text-primary-text-gold block mb-0.5">Caller: {activeCaller.fullName}</span>
-                        <p className="text-foreground/80 leading-relaxed font-medium">
-                          {priorCaseMatch}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : activeSource === "YouTubeLive" ? (
-                // YouTube Chat comments feed
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <h3 className="text-xs font-bold text-foreground uppercase tracking-tight mb-2 border-b border-border-warm pb-2 flex justify-between items-center">
-                    <span>YT Live Chat Stream</span>
-                    <span className="bg-red-50 text-red-600 text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-widest animate-pulse">Monitor</span>
-                  </h3>
-
-                  {/* YouTube Embed Player */}
-                  {isLive && (
-                    <div className="mb-3 shrink-0 rounded-xl overflow-hidden border border-border-warm bg-black">
-                      <iframe 
-                        className="w-full h-[150px]" 
-                        src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1" 
-                        title="Sharjah Live stream" 
-                        frameBorder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowFullScreen
-                      ></iframe>
-                    </div>
-                  )}
-
-                  <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 text-xs">
-                    {ytComments.length === 0 ? (
-                      <span className="text-foreground/40 text-[10px] text-center my-auto">Stream chat offline</span>
-                    ) : (
-                      ytComments.map((c, i) => (
-                        <div key={i} className="flex gap-1.5 p-2 bg-background border border-border-warm rounded-lg">
-                          <span className="font-bold text-primary-text-gold">@{c?.username}:</span>
-                          <span className="text-foreground/80 leading-relaxed">{c?.comment}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : (
-                // Broadcast Telemetry Panel (LiveTV & RadioAoIP)
-                <div className="flex-1 flex flex-col overflow-hidden justify-between">
-                  <div>
-                    <h3 className="text-xs font-bold text-foreground uppercase tracking-tight mb-3 border-b border-border-warm pb-2 flex justify-between items-center shrink-0">
-                      <span>Broadcast Ingest Telemetry</span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-widest ${
-                        isLive 
-                          ? "bg-green-50 text-active-green animate-pulse" 
-                          : "bg-foreground/5 text-foreground/40"
-                      }`}>
-                        {isLive ? "Active Feed" : "Offline"}
-                      </span>
+            {/* TOP SECTION: YouTube Player OR Hotline Caller Queue */}
+            {activeSource === "HotLine" ? (
+              /* HOTLINE MODE: Caller Queue Panel */
+              <div className="h-[52%] bg-card border border-border-warm rounded-2xl p-4 flex flex-col gap-3 overflow-hidden shadow-2xs shrink-0">
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-border-warm pb-2 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                    <h3 className="text-xs font-bold text-foreground uppercase tracking-widest">
+                      📞 Active Screener Queue & Hotline Ingest
                     </h3>
+                  </div>
+                  <span className="bg-gold/15 text-gold border border-gold/30 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    {callerQueue.length} Callers Waiting
+                  </span>
+                </div>
 
-                    {/* Audio Levels (VU Meters) */}
-                    <div className="mb-3.5 flex flex-col gap-2 shrink-0">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex justify-between items-center text-[9px] uppercase font-bold text-foreground/50">
-                          <span>Presenter Mic</span>
-                          <span className="font-mono text-[9px]">{isLive ? `${presenterDb} dB` : "-INF"}</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden flex">
-                          <div 
-                            className={`h-full transition-all duration-150 ${
-                              presenterDb > -10 ? "bg-red-500" : presenterDb > -20 ? "bg-gold" : "bg-active-green"
-                            }`}
-                            style={{ width: `${isLive ? Math.max(0, Math.min(100, ((presenterDb + 60) / 60) * 100)) : 0}%` }}
-                          />
-                        </div>
+                {/* Currently Active / On-Air Caller Card (if any) */}
+                {activeCaller && (
+                  <div className="bg-gradient-to-r from-amber-500/10 via-gold-muted/30 to-background border border-gold/40 rounded-xl p-3 flex flex-col gap-1.5 shrink-0 shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+                        <span className="text-[9.5px] font-bold uppercase tracking-wider text-red-600">
+                          🔴 Currently On-Air Caller
+                        </span>
                       </div>
-                      
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex justify-between items-center text-[9px] uppercase font-bold text-foreground/50">
-                          <span>Ingest Audio</span>
-                          <span className="font-mono text-[9px]">{isLive ? `${ingestDb} dB` : "-INF"}</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden flex">
-                          <div 
-                            className={`h-full transition-all duration-150 ${
-                              ingestDb > -10 ? "bg-red-500" : ingestDb > -20 ? "bg-gold" : "bg-active-green"
-                            }`}
-                            style={{ width: `${isLive ? Math.max(0, Math.min(100, ((ingestDb + 60) / 60) * 100)) : 0}%` }}
-                          />
-                        </div>
-                      </div>
+                      <span className="text-[9.5px] font-mono font-bold text-foreground/50">{activeCaller.region}</span>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
-                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Latency Offset</span>
-                        <span className="font-mono font-bold text-[11px] text-foreground mt-0.5 truncate">
-                          {isLive ? telemetryLatency : "—"}
-                        </span>
+                    <div className="flex justify-between items-center pt-0.5">
+                      <div>
+                        <h4 className="text-xs font-black text-foreground uppercase">{activeCaller.fullName}</h4>
+                        <p className="text-[10px] text-foreground/60 font-mono">{activeCaller.mobile} • {activeCaller.category}</p>
                       </div>
 
-                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Packet Loss</span>
-                        <span className={`font-mono font-bold text-[11px] mt-0.5 truncate ${
-                          isLive && parseFloat(telemetryPacketLoss) > 0 ? "text-red-500" : "text-foreground"
-                        }`}>
-                          {isLive ? telemetryPacketLoss : "—"}
-                        </span>
-                      </div>
-
-                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Ingest Bitrate</span>
-                        <span className="font-mono font-bold text-[11px] text-foreground mt-0.5 truncate">
-                          {isLive ? telemetryBitrate : "—"}
-                        </span>
-                      </div>
-
-                      <div className="bg-background border border-border-warm rounded-xl p-2.5 flex flex-col gap-0.5">
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Feed Uptime</span>
-                        <span className="font-mono font-bold text-[11px] text-foreground mt-0.5 truncate">
-                          {isLive ? formatUptime(telemetryUptime) : "00:00:00"}
-                        </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={handleGenerateDraftClick}
+                          className="bg-gold hover:bg-gold-hover text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
+                        >
+                          + Log Case
+                        </button>
+                        <button
+                          onClick={handleDisconnectClick}
+                          className="bg-red-600 hover:bg-red-700 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
+                        >
+                          Disconnect
+                        </button>
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Low-profile Ingest Feed Details Footer */}
-                  <div className="pt-2.5 border-t border-border-warm text-[10px] text-foreground/60 flex flex-col gap-1.5 shrink-0 mt-auto">
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold uppercase tracking-wider text-foreground/40 text-[8px]">Endpoint URL:</span>
-                      <span className="font-mono truncate max-w-[220px] text-[10px] text-foreground/75" title={streamUrl}>{streamUrl || "—"}</span>
-                    </div>
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold uppercase tracking-wider text-foreground/40 text-[8px]">Channel ID:</span>
-                      <span className="truncate max-w-[220px] text-[10px] text-foreground/75" title={ingestChannel}>{ingestChannel || "—"}</span>
-                    </div>
+                {/* Queue List */}
+                <div className="flex-1 flex flex-col gap-1.5 min-h-0 overflow-hidden">
+                  <div className="flex justify-between items-center shrink-0 border-b border-border-warm pb-1">
+                    <span className="text-[9.5px] uppercase font-bold text-foreground/50 tracking-wider">Screened Caller Queue</span>
+                    <span className="text-[9px] font-bold text-foreground/40 uppercase">Click 'Patch Air' to connect</span>
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* Tabbed AI Assistant & Directives Panel */}
-            <div className="bg-card border border-border-warm rounded-xl p-5 shadow-[0_2px_8px_rgba(20,19,17,0.02)] shrink-0 flex flex-col gap-3 min-h-[220px]">
-              
-              <div className="flex justify-between items-center border-b border-border-warm pb-2 shrink-0">
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => setRightPanelTab("prompts")}
-                    className={`text-xs font-bold uppercase tracking-tight pb-2 border-b-2 transition-colors ${
-                      rightPanelTab === "prompts" ? "border-gold text-foreground" : "border-transparent text-foreground/50 hover:text-foreground/80"
-                    }`}
-                  >
-                    AI Suggestions
-                  </button>
-                  <button 
-                    onClick={() => setRightPanelTab("directives")}
-                    className={`text-xs font-bold uppercase tracking-tight pb-2 border-b-2 transition-colors ${
-                      rightPanelTab === "directives" ? "border-gold text-foreground" : "border-transparent text-foreground/50 hover:text-foreground/80"
-                    }`}
-                  >
-                    Extracted Directives
-                  </button>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {rightPanelTab === "prompts" && (
-                    <span className="bg-gold-muted text-gold text-[9px] px-1.5 py-0.5 rounded border border-gold/10 font-bold">
-                      {aiPrompts?.length || 0} ALERTS
-                    </span>
-                  )}
-                  {rightPanelTab === "directives" && isLive && (
-                    <span className="bg-gold-muted text-gold text-[9px] px-1.5 py-0.5 rounded border border-gold/15 font-bold">
-                      Acc: {sttConfidence}%
-                    </span>
-                  )}
-                  {rightPanelTab === "directives" && extractedDirectives.length > 0 && (
-                    <span className="bg-red-50 text-red-700 text-[9px] px-1.5 py-0.5 rounded border border-red-200 font-bold">
-                      {extractedDirectives.length} DETECTED
-                    </span>
-                  )}
+                  <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 custom-kanban-scrollbar">
+                    {(() => {
+                      const waitingCallers = callerQueue.filter(ticket => !activeCaller || ticket.id !== activeCaller.id);
+                      return waitingCallers.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center text-foreground/40 py-6">
+                          <span className="text-[10px] font-bold uppercase tracking-wider">No Other Callers Waiting</span>
+                        </div>
+                      ) : (
+                        waitingCallers.map((ticket) => (
+                          <div 
+                            key={ticket.id} 
+                            className="p-2 bg-background border border-border-warm rounded-xl flex items-center justify-between shadow-2xs hover:border-gold/50 transition-all"
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-xs text-foreground">{ticket.fullName}</span>
+                                <span className="text-[8.5px] bg-foreground/5 text-foreground/60 px-1.5 py-0.5 rounded font-mono font-bold">
+                                  {ticket.region}
+                                </span>
+                              </div>
+                              <span className="text-[9.5px] text-foreground/60">{ticket.category} • {ticket.mobile}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => goOnAir(ticket)}
+                                className="bg-gold hover:bg-gold-hover text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider transition-colors shadow-2xs cursor-pointer whitespace-nowrap"
+                              >
+                                ⚡ Patch Air
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
-
-              {/* Tab Content: AI Prompts */}
-              {rightPanelTab === "prompts" && (
-                <div className="flex-1 max-h-[160px] overflow-y-auto pr-1 flex flex-col gap-3">
-                  {!aiPrompts || aiPrompts.length === 0 ? (
-                    <div className="flex flex-col justify-center items-center text-center text-foreground/45 border border-dashed border-border-warm rounded-lg p-4 h-full">
-                      <span className="text-[10px] font-bold uppercase tracking-wide">No active prompts</span>
-                    </div>
-                  ) : (
-                    aiPrompts.map((prompt) => (
-                      <div 
-                        key={prompt.id} 
-                        className="p-3 border border-gold/30 bg-gold-muted rounded-xl flex flex-col gap-1.5 animate-in slide-in-from-right duration-300"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-[10px] text-primary-text-gold">{prompt.title}</span>
-                        </div>
-                        <p className="text-[10px] text-foreground/85 leading-relaxed">{prompt.content}</p>
-                      </div>
-                    ))
-                  )}
+            ) : isLive && activeSource === "YouTubeLive" ? (
+              <div className="w-full aspect-video rounded-2xl overflow-hidden border border-border-warm bg-black shadow-md shrink-0">
+                <iframe 
+                  className="w-full h-full" 
+                  src="https://www.youtube.com/embed/wWYK6IVszPk?autoplay=0&mute=1" 
+                  title="Sharjah Live stream" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowFullScreen
+                ></iframe>
+              </div>
+            ) : (
+              <div className="w-full aspect-video rounded-2xl border border-border-warm bg-card flex flex-col justify-center items-center text-center p-8 shrink-0 shadow-xs">
+                <div className="w-14 h-14 rounded-full bg-gold-muted border border-gold/20 flex items-center justify-center text-gold font-bold text-xl mb-3">
+                  📻
                 </div>
-              )}
+                <h3 className="text-base font-bold text-foreground uppercase tracking-tight mb-1.5">System Ingestion Standby</h3>
+                <p className="text-xs text-foreground/50 max-w-sm uppercase tracking-wider leading-relaxed">
+                  Ingestion feed offline. Connect ingest feed from the control bar to start live broadcast.
+                </p>
+              </div>
+            )}
 
-              {/* Tab Content: Extracted Directives */}
-              {rightPanelTab === "directives" && (
-                <div className="flex-1 flex flex-col gap-3 overflow-y-auto max-h-[160px]">
-                  {activeSource !== "HotLine" && extractedDirectives.length === 0 ? (
-                    <span className="text-foreground/40 text-[10px] text-center py-4 my-auto">Awaiting live directive detection...</span>
-                  ) : activeSource === "HotLine" && !activeCaller ? (
-                    <span className="text-foreground/40 text-[10px] text-center py-4 my-auto">No active caller to extract draft from</span>
-                  ) : (
-                    <div className="flex flex-col gap-2.5">
-                      <div className="p-3 bg-red-50/50 border border-red-200 rounded-xl text-xs">
-                        {activeSource === "HotLine" && activeCaller ? (
-                          <div>
-                            <span className="font-semibold text-primary-text-gold block">Caller: {activeCaller.fullName}</span>
-                            <p className="text-foreground/80 mt-1 italic">"{activeCaller.notes}"</p>
+            {/* LOWER LEFT SECTION: Auxiliary Producer Tools - AI Suggestions & Notes */}
+            <section className="flex-1 bg-card border border-border-warm rounded-2xl p-4 flex flex-col overflow-hidden shadow-2xs min-h-0">
+                  
+                  {/* Lower Tabs Header */}
+                  <div className="flex items-center gap-1 border-b border-border-warm mb-3 overflow-x-auto shrink-0 scrollbar-none">
+                    <button 
+                      onClick={() => setLowerPanelTab("prompts")}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 -mb-[1px] transition-colors whitespace-nowrap ${
+                        lowerPanelTab === "prompts" ? "border-gold text-gold" : "border-transparent text-foreground/50 hover:text-foreground hover:border-border-warm"
+                      }`}
+                    >
+                      Suggestions
+                    </button>
+                    <button 
+                      onClick={() => setLowerPanelTab("notes")}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 -mb-[1px] transition-colors whitespace-nowrap ${
+                        lowerPanelTab === "notes" ? "border-gold text-gold" : "border-transparent text-foreground/50 hover:text-foreground hover:border-border-warm"
+                      }`}
+                    >
+                      Notes
+                    </button>
+                  </div>
+
+                  {/* Lower Tab Content Wrappers */}
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    
+                    {/* TAB: AI SUGGESTIONS */}
+                    {lowerPanelTab === "prompts" && (
+                      <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 custom-kanban-scrollbar pr-3">
+
+                        {!aiPrompts || aiPrompts.length === 0 ? (
+                          <div className="flex-1 flex flex-col justify-center items-center text-center text-foreground/45 border border-dashed border-border-warm rounded-xl p-3 min-h-[80px]">
+                            <span className="text-[9.5px] font-bold uppercase tracking-wide">No active prompts</span>
                           </div>
                         ) : (
-                          <div>
-                            <span className="font-semibold text-red-950 block">Directive: Cover Health Debt</span>
-                            <span className="text-[10px] text-foreground/50 mt-0.5 block">Target: {extractedDirectives[0]?.entity}</span>
-                            <p className="text-foreground/80 mt-1 italic">"{extractedDirectives[0]?.text}"</p>
-                          </div>
+                          aiPrompts.map((prompt) => (
+                            <div 
+                              key={prompt.id} 
+                              className="p-2.5 border border-gold/30 bg-gold-muted/40 rounded-xl flex flex-col gap-1 animate-in slide-in-from-right duration-300"
+                            >
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-[11px] text-primary-text-gold">{prompt.title}</span>
+                              </div>
+                              <p className="text-[13px] text-foreground/85 leading-relaxed">{prompt.content}</p>
+                            </div>
+                          ))
                         )}
                       </div>
-                      
-                      <button
-                        onClick={() => router.push('/directives?action=new')}
-                        className="w-full shrink-0 bg-gold hover:bg-gold-hover text-white py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-colors"
-                      >
-                        Log Directive
-                      </button>
+                    )}
+
+                    {/* TAB: NOTES */}
+                    {lowerPanelTab === "notes" && (
+                      <div className="flex-1 flex flex-col gap-2 overflow-hidden">
+                        <div className="flex justify-between items-center shrink-0 border-b border-border-warm pb-1 mb-1">
+                          <span className="text-[10px] uppercase font-bold text-foreground/50 font-black">Producer Notes</span>
+                          {notesSaved && (
+                            <span className="text-[8.5px] text-active-green font-bold uppercase tracking-wider animate-pulse">✓ Saved</span>
+                          )}
+                        </div>
+                        <textarea 
+                          value={producerNotes}
+                          onChange={(e) => setProducerNotes(e.target.value)}
+                          className="flex-1 w-full bg-background border border-border-warm rounded-xl p-2.5 text-[11px] focus:outline-none focus:border-gold resize-none"
+                          placeholder={
+                            activeCaller 
+                              ? "Type call notes here..."
+                              : "Type session notes here..."
+                          }
+                        ></textarea>
+                        <div className="flex justify-end shrink-0">
+                          <button 
+                            onClick={handleSaveNotes}
+                            className="bg-gold hover:bg-gold-hover text-white px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
+                          >
+                            Save Notes
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                </section>
+
+          </div>
+
+          {/* RIGHT: Expanded Utility Panels Column (5 cols / ~42% width) */}
+          <div className="col-span-5 flex flex-col gap-4 overflow-hidden h-full">
+            
+            {/* FULL HEIGHT SECTION: Live Feeds & Cases/Directives */}
+            <section className="flex-1 bg-card border border-border-warm rounded-2xl p-4 flex flex-col overflow-hidden shadow-[0_2px_8px_rgba(20,19,17,0.02)] min-h-0">
+              
+              {/* Upper Tabs Header */}
+              <div className="flex items-center gap-1 border-b border-border-warm mb-3 overflow-x-auto shrink-0 scrollbar-none">
+                <button 
+                  onClick={() => setUpperPanelTab("transcript")}
+                  className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 -mb-[1px] transition-colors whitespace-nowrap ${
+                    upperPanelTab === "transcript" ? "border-gold text-gold" : "border-transparent text-foreground/50 hover:text-foreground hover:border-border-warm"
+                  }`}
+                >
+                  Transcript
+                </button>
+                <button 
+                  onClick={() => setUpperPanelTab("directives")}
+                  className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 -mb-[1px] transition-colors whitespace-nowrap ${
+                    upperPanelTab === "directives" ? "border-gold text-gold" : "border-transparent text-foreground/50 hover:text-foreground hover:border-border-warm"
+                  }`}
+                >
+                  Cases & Directives
+                </button>
+                {activeSource === "YouTubeLive" ? (
+                  <button 
+                    onClick={() => setUpperPanelTab("chat")}
+                    className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 -mb-[1px] transition-colors whitespace-nowrap ${
+                      upperPanelTab === "chat" ? "border-gold text-gold" : "border-transparent text-foreground/50 hover:text-foreground hover:border-border-warm"
+                    }`}
+                  >
+                    Chat Comments
+                  </button>
+                ) : activeSource !== "HotLine" ? (
+                  <button 
+                    onClick={() => setUpperPanelTab("telemetry")}
+                    className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 -mb-[1px] transition-colors whitespace-nowrap ${
+                      upperPanelTab === "telemetry" ? "border-gold text-gold" : "border-transparent text-foreground/50 hover:text-foreground hover:border-border-warm"
+                    }`}
+                  >
+                    Telemetry
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Upper Tab Content Wrappers */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                
+                {/* TAB: TRANSCRIPT */}
+                {upperPanelTab === "transcript" && (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex justify-between items-center shrink-0 border-b border-border-warm pb-1.5 mb-2.5">
+                      <span className="text-[10px] uppercase font-bold text-foreground/50">Speech Live Transcript</span>
+                      {/* Language Toggler */}
+                      <div className="flex bg-background border border-border-warm rounded-lg p-0.5 text-[8.5px] font-bold shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setTranscriptLang("EN")}
+                          className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${transcriptLang === "EN" ? "bg-gold text-white" : "text-foreground/50 hover:text-foreground"}`}
+                        >
+                          EN
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTranscriptLang("AR")}
+                          className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${transcriptLang === "AR" ? "bg-gold text-white" : "text-foreground/50 hover:text-foreground"}`}
+                        >
+                          AR
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
+                    
+                    <div className="flex-1 overflow-y-auto pr-3 flex flex-col gap-2.5 custom-kanban-scrollbar">
+                      {editableTranscripts.length === 0 ? (
+                        <div className="h-full flex flex-col justify-center items-center text-center text-foreground/45 py-6">
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Awaiting live feed start...</span>
+                        </div>
+                      ) : (
+                        editableTranscripts.map((line, idx) => {
+                          const isHost = line.speaker.toUpperCase() === "HOST" || line.speaker.toUpperCase() === "PRESENTER" || line.speaker.toUpperCase() === "LEADERSHIP";
+                          return (
+                            <div 
+                              key={idx}
+                              className={`flex w-full ${isHost ? "justify-end" : "justify-start"}`}
+                            >
+                              <div className={`flex flex-col gap-1 p-2.5 border rounded-xl w-full shadow-xs transition-all ${
+                                line.detectionType === "directive"
+                                  ? "border-red-300 bg-red-500/10 shadow-sm"
+                                  : line.detectionType === "suggested_case"
+                                  ? "border-gold/50 bg-gold-muted/40 shadow-sm"
+                                  : isHost 
+                                  ? "border-gray-200 bg-green-50/30 rounded-tr-sm" 
+                                  : "border-gray-200 bg-background rounded-tl-sm"
+                              }`}>
+                                <div className="flex items-center justify-between text-[8px] font-bold uppercase text-foreground/40 mb-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={isHost ? "text-green-700 font-bold" : ""}>{line.speaker}</span>
+                                    {line.detectionType === "directive" && (
+                                      <span className="bg-red-600 text-white text-[7.5px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider shadow-2xs">
+                                        👑 Royal Directive
+                                      </span>
+                                    )}
+                                    {line.detectionType === "suggested_case" && (
+                                      <span className="bg-gold text-white text-[7.5px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider shadow-2xs">
+                                        💡 AI Suggested Case
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span>{line.timestamp}</span>
+                                </div>
+                                <textarea
+                                  rows={2}
+                                  value={transcriptLang === "AR" ? (line.textAr || line.text) : line.text}
+                                  onChange={(e) => handleTranscriptTextChange(idx, e.target.value)}
+                                  className={`w-full border border-transparent focus:outline-none rounded px-1.5 py-1 text-[13px] transition-all bg-transparent resize-none leading-relaxed ${
+                                    isHost ? "text-green-950 focus:bg-white/80" : "text-foreground focus:bg-card"
+                                  }`}
+                                  dir={transcriptLang === "AR" ? "rtl" : "ltr"}
+                                ></textarea>
 
-            </div>
+                                {line.detectionType && (
+                                  <div className="mt-1 pt-1.5 border-t border-border-warm/40 flex justify-between items-center">
+                                    <div className="flex gap-2 items-center">
+                                      {line.detectionType === "suggested_case" && (
+                                        <button onClick={() => router.push('/cases?action=view&id=CASE-9411')} className="text-[9px] font-bold text-gold hover:underline flex items-center gap-1 cursor-pointer">
+                                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                          Past Case: CASE-9411
+                                        </button>
+                                      )}
+                                      {line.detectionType === "directive" && (
+                                        <button onClick={() => router.push('/cases?action=view&id=CASE-9810')} className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1 cursor-pointer">
+                                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                          Past Case: CASE-9810
+                                        </button>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const isDir = line.detectionType === "directive";
+                                        const name = line.citizenName || (isDir ? "Ahmed Al-Suwaidi" : "Abdullah Al-Mansoori");
+                                        const citizenId = isDir ? "CIT-5678" : "CIT-1234";
+                                        const category = isDir ? "Health & Medical" : "Housing Allocation";
+                                        const dept = isDir ? "Sharjah Health Authority" : "Sharjah Housing Directorate";
+                                        const summary = isDir 
+                                          ? "Executive Directive: Cover outstanding medical debt immediately"
+                                          : "AI Suggested Case: Housing grant application SHJ-HSG-9841 pending review";
+                                        const subDept = isDir ? "Medical Approvals" : "Housing Grants";
+                                        const liaison = isDir ? "Dr. Khalid Al-Qasimi" : "Eng. Ahmed Al-Suwaidi";
+                                        const sla = isDir ? "24" : "72";
+                                        const d = new Date();
+                                        if (!isDir) d.setDate(d.getDate() + 3);
+                                        const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                                        
+                                        router.push(`/cases?action=new&autofill=true&name=${encodeURIComponent(name)}&citizenId=${encodeURIComponent(citizenId)}&category=${encodeURIComponent(category)}&dept=${encodeURIComponent(dept)}&subDept=${encodeURIComponent(subDept)}&liaison=${encodeURIComponent(liaison)}&sla=${sla}&date=${date}&summary=${encodeURIComponent(summary)}`);
+                                      }}
+                                      className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer ${
+                                        line.detectionType === "directive"
+                                          ? "bg-red-600 hover:bg-red-700 text-white"
+                                          : "bg-gold hover:bg-gold-hover text-white"
+                                      }`}
+                                    >
+                                      ⚡ Update {line.detectionType === "directive" ? "Royal Case" : "Citizen Case"} (Auto-fill)
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                      <div ref={transcriptEndRef} />
+                    </div>
+                  </div>
+                )}
 
-          </section>
+                {/* TAB: CASES & DIRECTIVES */}
+                {upperPanelTab === "directives" && (
+                  <div className="flex-1 flex flex-col gap-2.5 overflow-hidden">
+                    <div className="flex justify-between items-center shrink-0 border-b border-border-warm pb-1.5">
+                      <span className="text-[10px] uppercase font-bold text-foreground/50">Extracted Cases & Directives</span>
+                      {isLive && (
+                        <span className="bg-gold-muted text-gold text-[9px] px-1.5 py-0.5 rounded border border-gold/15 font-bold">
+                          STT Confidence: {sttConfidence}%
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 pr-3 custom-kanban-scrollbar">
+                      {extractedDirectives.length === 0 ? (
+                        <span className="text-foreground/40 text-[10px] text-center py-6 my-auto uppercase tracking-wider font-bold">Awaiting AI extraction detection...</span>
+                      ) : (
+                        extractedDirectives.map((item, idx) => {
+                          const isDirective = item.type === "directive" || item.priority === "Critical";
+                          return (
+                            <div 
+                              key={item.id || idx}
+                              className={`p-3 rounded-xl border flex flex-col gap-1.5 shadow-2xs transition-all ${
+                                isDirective
+                                  ? "border-red-300 bg-red-50/60 dark:bg-red-950/20"
+                                  : "border-gold/40 bg-gold-muted/30"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                  isDirective ? "bg-red-600 text-white" : "bg-gold text-white"
+                                }`}>
+                                  {isDirective ? "👑 Royal Directive" : "💡 AI Suggested Case"}
+                                </span>
+                                <span className="text-[8.5px] font-bold text-foreground/50 uppercase">{item.category}</span>
+                              </div>
 
+                              <div>
+                                <span className="font-bold text-xs text-foreground block">
+                                  Citizen: {item.citizenName}
+                                </span>
+                                <span className="text-[9.5px] text-foreground/60 block mt-0.5">
+                                  Assigned Authority: <strong className="text-foreground/80">{item.entity}</strong>
+                                </span>
+                                <p className="text-[11px] text-foreground/85 italic mt-1 bg-background/50 p-1.5 rounded-lg border border-border-warm/50">
+                                  "{item.text}"
+                                </p>
+                              </div>
+
+                              <div className="mt-1 pt-1.5 border-t border-border-warm/40 flex justify-between items-center">
+                                <div className="flex gap-2 items-center">
+                                  {!isDirective && (
+                                    <button onClick={() => router.push('/cases?action=view&id=CASE-9411')} className="text-[9px] font-bold text-gold hover:underline flex items-center gap-1 cursor-pointer">
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                      Linked: CASE-9411
+                                    </button>
+                                  )}
+                                  {isDirective && (
+                                    <button onClick={() => router.push('/cases?action=view&id=CASE-9810')} className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1 cursor-pointer">
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                      Linked: CASE-9810
+                                    </button>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const name = item.citizenName;
+                                    const citizenId = isDirective ? "CIT-5678" : "CIT-1234";
+                                    const category = isDirective ? "Health & Medical" : "Housing";
+                                    const dept = isDirective ? "Sharjah Health Authority" : "Sharjah Housing Directorate";
+                                    const summary = isDirective
+                                      ? `Executive Directive: ${item.text}`
+                                      : `AI Suggested Case: ${item.text}`;
+                                    const subDept = isDirective ? "Medical Approvals" : "Housing Grants";
+                                    const liaison = isDirective ? "Dr. Khalid Al-Qasimi" : "Eng. Ahmed Al-Suwaidi";
+                                    const sla = isDirective ? "24" : "72";
+                                    const d = new Date();
+                                    if (!isDirective) d.setDate(d.getDate() + 3);
+                                    const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                                    
+                                    router.push(`/cases?action=new&autofill=true&name=${encodeURIComponent(name)}&citizenId=${encodeURIComponent(citizenId)}&category=${encodeURIComponent(category)}&dept=${encodeURIComponent(dept)}&subDept=${encodeURIComponent(subDept)}&liaison=${encodeURIComponent(liaison)}&sla=${sla}&date=${date}&summary=${encodeURIComponent(summary)}`);
+                                  }}
+                                  className={`px-3 py-1.5 rounded-lg font-bold text-[9.5px] uppercase tracking-wider shadow-2xs transition-colors cursor-pointer ${
+                                    isDirective 
+                                      ? "bg-red-600 hover:bg-red-700 text-white" 
+                                      : "bg-gold hover:bg-gold-hover text-white"
+                                  }`}
+                                >
+                                  ⚡ Update {isDirective ? "Royal Case" : "Citizen Case"} (Auto-fill)
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: CHAT COMMENTS */}
+                {upperPanelTab === "chat" && activeSource === "YouTubeLive" && (
+                  <div className="flex-1 flex flex-col gap-2.5 overflow-hidden">
+                    <div className="flex justify-between items-center shrink-0 border-b border-border-warm pb-1.5">
+                      <span className="text-[10px] uppercase font-bold text-foreground/50">YT Live Chat</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-3 flex flex-col gap-2 text-xs custom-kanban-scrollbar">
+                      {ytComments.length === 0 ? (
+                        <span className="text-foreground/40 text-[10px] text-center py-6 my-auto uppercase tracking-wider font-bold">Awaiting comments...</span>
+                      ) : (
+                        ytComments.map((c, i) => (
+                          <div key={i} className="p-2 bg-background border border-border-warm rounded-xl flex flex-col gap-0.5 shadow-2xs">
+                            <span className="font-bold text-[10px] text-foreground/50 font-mono">@{c.username}:</span>
+                            <p className="text-[13px] text-foreground/85 leading-snug">{c.comment}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+
+
+                {/* TAB: TELEMETRY */}
+                {upperPanelTab === "telemetry" && (
+                  <div className="flex-1 overflow-y-auto flex flex-col gap-2 text-xs">
+                    <div className="p-2.5 bg-background border border-border-warm rounded-xl flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-foreground/50 uppercase">Protocol:</span>
+                      <span className="font-mono text-gold font-bold">{activeSource}</span>
+                    </div>
+                    <div className="p-2.5 bg-background border border-border-warm rounded-xl flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-foreground/50 uppercase">Status:</span>
+                      <span className={`font-bold ${isLive ? "text-green-600" : "text-foreground/40"}`}>{isLive ? "ON AIR" : "STANDBY"}</span>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </section>
+
+          </div>
         </div>
       </main>
+    )}
 
       {/* 3. Ingestion Config Setup Drawer (Slides right to left) */}
       {isConfigDrawerOpen && (
@@ -906,6 +1104,23 @@ export default function ProducerStudioPage() {
 
               <div className="flex flex-col gap-4">
                 
+                {/* Royal Directive / Live Ingestion Quote Banner */}
+                {desc && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 flex flex-col gap-1.5 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                        <span>👑 Royal Verbal Directive Text</span>
+                      </span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                        Live Ingest Feed
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/90 italic font-medium leading-relaxed bg-background/80 p-2.5 rounded-lg border border-amber-500/20">
+                      "{desc.replace(/^VERBAL EXECUTIVE DIRECTIVE ISSUED ON AIR:\n/, '').replace(/^"/, '').replace(/"$/, '')}"
+                    </p>
+                  </div>
+                )}
+
                 {/* Case Title */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-foreground/70 uppercase tracking-wide">
@@ -1028,6 +1243,7 @@ export default function ProducerStudioPage() {
                 onClick={() => {
                   setShowConfirmModal(false);
                   endCall();
+                  router.push('/executive/ingestion');
                 }}
                 className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-[10px] uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
               >
@@ -1039,7 +1255,113 @@ export default function ProducerStudioPage() {
       )}
 
       </div>
+      {/* 4. Telemetry Slide-Over Drawer */}
+      {isTelemetryDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end">
+          <div className="bg-card border-l border-border-warm p-6 w-full max-w-md shadow-2xl h-full flex flex-col justify-between animate-in slide-in-from-right duration-300">
+            <div className="flex flex-col gap-6">
+              <header className="flex justify-between items-center border-b border-border-warm pb-3">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${isLive ? "bg-green-500 animate-pulse" : "bg-foreground/30"}`} />
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">
+                      Broadcast Stream Telemetry
+                    </h3>
+                    <p className="text-[10px] text-foreground/50 uppercase tracking-wider mt-0.5">
+                      Signal SLA & Live Audio Line Monitoring
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsTelemetryDrawerOpen(false)}
+                  className="text-foreground/40 hover:text-foreground p-1 rounded-lg hover:bg-background transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </header>
+
+              {/* Audio VU Level Meters */}
+              <div className="bg-background border border-border-warm rounded-2xl p-4 flex flex-col gap-4 shadow-2xs">
+                <span className="text-[10px] font-bold text-foreground/50 uppercase tracking-widest">Audio Sub-Mix Lines</span>
+                
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-center text-[10px] uppercase font-bold text-foreground/70">
+                    <span>Presenter Line</span>
+                    <span className="font-mono">{isLive ? `${presenterDb} dB` : "-INF"}</span>
+                  </div>
+                  <div className="h-2 w-full bg-card border border-border-warm rounded-full overflow-hidden flex">
+                    <div 
+                      className={`h-full transition-all duration-150 rounded-full ${presenterDb > -10 ? "bg-red-500" : presenterDb > -20 ? "bg-gold" : "bg-green-500"}`} 
+                      style={{ width: `${isLive ? Math.max(0, Math.min(100, ((presenterDb + 60) / 60) * 100)) : 0}%` }} 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-center text-[10px] uppercase font-bold text-foreground/70">
+                    <span>Ingest Stream Audio Line</span>
+                    <span className="font-mono">{isLive ? `${ingestDb} dB` : "-INF"}</span>
+                  </div>
+                  <div className="h-2 w-full bg-card border border-border-warm rounded-full overflow-hidden flex">
+                    <div 
+                      className={`h-full transition-all duration-150 rounded-full ${ingestDb > -10 ? "bg-red-500" : ingestDb > -20 ? "bg-gold" : "bg-green-500"}`} 
+                      style={{ width: `${isLive ? Math.max(0, Math.min(100, ((ingestDb + 60) / 60) * 100)) : 0}%` }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Telemetry Data Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-background border border-border-warm rounded-xl p-3 flex flex-col gap-1 shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Latency</span>
+                  <span className="font-mono font-bold text-sm text-foreground">{isLive ? telemetryLatency : "—"}</span>
+                </div>
+                <div className="bg-background border border-border-warm rounded-xl p-3 flex flex-col gap-1 shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Packet Loss</span>
+                  <span className="font-mono font-bold text-sm text-foreground">{isLive ? telemetryPacketLoss : "—"}</span>
+                </div>
+                <div className="bg-background border border-border-warm rounded-xl p-3 flex flex-col gap-1 shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Bitrate</span>
+                  <span className="font-mono font-bold text-xs text-foreground truncate">{isLive ? telemetryBitrate : "—"}</span>
+                </div>
+                <div className="bg-background border border-border-warm rounded-xl p-3 flex flex-col gap-1 shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-foreground/50">Session Uptime</span>
+                  <span className="font-mono font-bold text-xs text-green-600 truncate">{isLive ? formatUptime(telemetryUptime) : "00:00:00"}</span>
+                </div>
+              </div>
+
+              {/* Protocol & Stream URL Info */}
+              <div className="bg-background border border-border-warm rounded-2xl p-4 flex flex-col gap-2 shadow-2xs">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[10px] font-bold text-foreground/50 uppercase">Protocol Source:</span>
+                  <span className="font-mono text-gold font-bold">{activeSource}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs border-t border-border-warm/60 pt-2">
+                  <span className="text-[10px] font-bold text-foreground/50 uppercase">Stream URL:</span>
+                  <span className="font-mono text-[10px] text-foreground/80 truncate max-w-[220px]" title={streamUrl}>{streamUrl || "—"}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsTelemetryDrawerOpen(false)}
+              className="w-full bg-foreground text-background hover:bg-gold hover:text-white py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+            >
+              Close Telemetry Panel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function ProducerStudioPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProducerStudioPageContent />
+    </Suspense>
   );
 }
 

@@ -19,6 +19,10 @@ export interface TranscriptLine {
   text: string;
   textAr?: string;
   timestamp: string;
+  detectionType?: "directive" | "suggested_case";
+  citizenName?: string;
+  category?: string;
+  entity?: string;
 }
 
 export interface AIPromptCard {
@@ -33,10 +37,13 @@ export interface LiveYTComment {
 }
 
 export interface ExtractedDirective {
+  id: string;
+  type: "directive" | "suggested_case";
   text: string;
   category: string;
   entity: string;
   citizenName: string;
+  priority: "Critical" | "High" | "Standard";
 }
 
 export interface ChecklistItem {
@@ -113,18 +120,26 @@ const MOCK_STREAM_TRANSCRIPT = [
   },
   { 
     speaker: "Presenter", 
+    text: "Citizen Abdullah Al-Mansoori from Al Dhaid reports housing grant application SHJ-HSG-9841 pending review since January 2025.",
+    textAr: "المواطن عبد الله المنصوري من الذيد يبلغ عن تأخر طلب منح الإسكان SHJ-HSG-9841 قيد المراجعة منذ يناير 2025.",
+    detectionType: "suggested_case" as const,
+    citizenName: "Abdullah Al-Mansoori",
+    category: "Housing Allocation",
+    entity: "Sharjah Housing Department"
+  },
+  { 
+    speaker: "Presenter", 
     text: "His Highness the Sheikh is currently listening to local concerns in the central region.",
     textAr: "صاحب السمو الشيخ يستمع حالياً إلى الشواغل المحلية في المنطقة الوسطى."
   },
   { 
     speaker: "Leadership", 
-    text: "Regarding the request from the citizen Ahmed Al-Suwaidi in Al Dhaid who has medical debt...",
-    textAr: "بخصوص الطلب المقدم من المواطن أحمد السويدي في الذيد الذي عليه ديون طبية..."
-  },
-  { 
-    speaker: "Leadership", 
-    text: "I direct the Sharjah Health Authority to cover his outstanding medical bills immediately.",
-    textAr: "أوجه هيئة الشارقة الصحية بتغطية فواتيره الطبية المستحقة فوراً."
+    text: "Regarding citizen Ahmed Al-Suwaidi in Al Dhaid, I direct the Sharjah Health Authority to cover his medical debt immediately.",
+    textAr: "بخصوص المواطن أحمد السويدي في الذيد، أوجه هيئة الشارقة الصحية بتغطية ديونه الطبية فوراً.",
+    detectionType: "directive" as const,
+    citizenName: "Ahmed Al-Suwaidi",
+    category: "Health & Medical",
+    entity: "Sharjah Health Authority"
   },
   { 
     speaker: "Presenter", 
@@ -141,7 +156,7 @@ const MOCK_YT_COMMENTS = [
 ];
 
 export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeSource, setActiveSource] = useState<BroadcastSource>("HotLine");
+  const [activeSource, setActiveSource] = useState<BroadcastSource>("YouTubeLive");
   const [callerQueue, setCallerQueue] = useState<ScreenerTicket[]>([
     {
       id: "caller-mock-1",
@@ -335,27 +350,59 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             speaker: line.speaker,
             text: line.text,
             textAr: line.textAr,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            detectionType: line.detectionType,
+            citizenName: line.citizenName,
+            category: line.category,
+            entity: line.entity
           }
         ]);
 
-        // Trigger simulated AI Directive detection card
+        // Trigger simulated AI Case Suggestion
+        if (lineIndex === 1) {
+          setAiPrompts((prev) => [
+            ...prev,
+            {
+              id: "case-prompt-1",
+              title: "💡 AI Case Suggested: Housing Delay",
+              content: "Citizen concern detected: Abdullah Al-Mansoori (SHJ-HSG-9841). Target: Sharjah Housing Department."
+            }
+          ]);
+          setExtractedDirectives((prev) => [
+            ...prev,
+            {
+              id: "item-case-1",
+              type: "suggested_case",
+              text: "Housing grant application SHJ-HSG-9841 pending review since Jan 2025.",
+              category: "Housing Allocation",
+              entity: "Sharjah Housing Department",
+              citizenName: "Abdullah Al-Mansoori",
+              priority: "Standard"
+            }
+          ]);
+        }
+
+        // Trigger simulated AI Royal Directive detection card
         if (lineIndex === 3) {
           setAiPrompts((prev) => [
             ...prev,
             {
               id: "directive-prompt-1",
-              title: "Directive Detected: His Highness",
-              content: "Order issued to Sharjah Health Authority to cover medical debt for citizen Ahmed Al-Suwaidi."
+              title: "👑 Royal Directive: His Highness",
+              content: "Royal order issued to Sharjah Health Authority to cover medical debt for citizen Ahmed Al-Suwaidi."
             }
           ]);
-          setExtractedDirectives([
+          setExtractedDirectives((prev) => [
             {
-              text: "Cover outstanding medical bills immediately.",
+              id: "item-dir-1",
+              type: "directive",
+              text: "Cover outstanding medical debt immediately.",
               category: "Health & Medical",
               entity: "Sharjah Health Authority",
-              citizenName: "Ahmed Al-Suwaidi"
-            }
+              citizenName: "Ahmed Al-Suwaidi",
+              priority: "Critical"
+            },
+            ...prev
           ]);
           setEntityChecklist([
             { name: "Subject Name", status: "extracted" },

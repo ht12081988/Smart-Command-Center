@@ -210,7 +210,6 @@ function ExecutiveDashboardContent() {
               </Link>
             </div>
           </div>
-
           {/* ── Charts Row ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-3 gap-4">
 

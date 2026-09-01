@@ -27,15 +27,78 @@ const SLA_BADGE: Record<SlaLabel, string> = {
 };
 
 
+const SLA_KANBAN_COLUMNS: { id: SlaLabel; title: string; theme: { bg: string; headerText: string; badge: string } }[] = [
+  {
+    id: "Breached",
+    title: "SLA Breached",
+    theme: {
+      bg: "bg-red-500/[0.02] border-red-500/15",
+      headerText: "text-red-600 dark:text-red-400",
+      badge: "bg-red-500/10 text-red-600 dark:text-red-400 animate-pulse"
+    }
+  },
+  {
+    id: "At Risk",
+    title: "At Risk",
+    theme: {
+      bg: "bg-orange-500/[0.02] border-orange-500/15",
+      headerText: "text-orange-600 dark:text-orange-400",
+      badge: "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+    }
+  },
+  {
+    id: "On Track",
+    title: "On Track",
+    theme: {
+      bg: "bg-blue-500/[0.02] border-blue-500/15",
+      headerText: "text-blue-600 dark:text-blue-400",
+      badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+    }
+  },
+  {
+    id: "Completed",
+    title: "Completed",
+    theme: {
+      bg: "bg-green-500/[0.02] border-green-500/15",
+      headerText: "text-green-600 dark:text-green-400",
+      badge: "bg-green-500/10 text-green-600 dark:text-green-400"
+    }
+  }
+];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ResolutionFollowUpPage() {
   const [cases, setCases]               = useState<Case[]>(MOCK_CASES);
   const [communications, setCommunications] = useState<CommunicationLog[]>([]);
   const [filterLabel, setFilterLabel]   = useState<"All" | SlaLabel>("All");
+  const [viewMode, setViewMode]         = useState<"kanban" | "list">("kanban");
 
   // Drawers
   const [logDrawerCase, setLogDrawerCase]   = useState<Case | null>(null);
   const [viewingCase, setViewingCase]       = useState<Case | null>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, targetLabel: SlaLabel) => {
+    e.preventDefault();
+    const caseId = e.dataTransfer.getData("text/plain");
+    if (!caseId) return;
+
+    setCases(prev => prev.map(c => {
+      if (c.id !== caseId) return c;
+      if (targetLabel === "Completed") {
+        return { ...c, status: "Resolved" };
+      } else if (targetLabel === "Breached") {
+        return { ...c, slaHours: -5, status: "Escalated" };
+      } else if (targetLabel === "At Risk") {
+        return { ...c, slaHours: 12 };
+      } else {
+        return { ...c, slaHours: 48 };
+      }
+    }));
+  };
 
 
   // Only cases assigned to external entities
@@ -182,7 +245,173 @@ export default function ResolutionFollowUpPage() {
 
           </div>
 
-          {/* ── Master Table ──────────────────────────────────────────────── */}
+        {/* Controls Bar: Section Title + View Mode Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">
+            Externally Assigned Cases Workspace
+          </h2>
+
+          <div className="flex items-center gap-1 bg-card border border-border-warm rounded-xl p-1 shrink-0 shadow-2xs">
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+              </svg>
+              Kanban Board
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              List View
+            </button>
+          </div>
+        </div>
+
+        {/* Main View: Kanban Board vs. List Data Table */}
+        {viewMode === "kanban" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+            {SLA_KANBAN_COLUMNS.map(col => {
+              const colCases = filteredCases.filter(c => getSlaStatus(c).label === col.id);
+              return (
+                <div 
+                  key={col.id}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, col.id)}
+                  className={`p-4 rounded-2xl border flex flex-col gap-3 min-h-[460px] ${col.theme.bg}`}
+                >
+                  <div className="flex justify-between items-center border-b border-border-warm pb-2 shrink-0">
+                    <span className={`font-bold text-xs uppercase tracking-wider flex items-center gap-2 ${col.theme.headerText}`}>
+                      {col.title}
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${col.theme.badge}`}>
+                        {colCases.length}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-3 custom-kanban-scrollbar pr-1">
+                    {colCases.length === 0 ? (
+                      <div className="text-center py-16 text-foreground/30 text-[10px] font-bold uppercase tracking-wider border border-dashed border-border-warm/40 rounded-xl">
+                        No Cases
+                      </div>
+                    ) : (
+                      colCases.map(c => {
+                        const sla = getSlaStatus(c);
+                        const logs = caseLogs(c.id);
+                        const isDone = sla.label === "Completed";
+
+                        return (
+                          <div 
+                            key={c.id}
+                            draggable
+                            onDragStart={(e) => e.dataTransfer.setData("text/plain", c.id)}
+                            className="bg-card border border-border-warm rounded-xl p-4 transition-all flex flex-col gap-2.5 shadow-2xs hover:border-gold/50 hover:shadow-md cursor-grab active:cursor-grabbing group relative"
+                          >
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <span className="font-bold text-xs text-primary-text-gold block mb-0.5">{c.id}</span>
+                                <span className="text-[9px] text-foreground/50 uppercase tracking-widest font-bold">
+                                  {c.feedSource}
+                                </span>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <span className={`px-2 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider ${
+                                  c.priority === "Critical" ? "bg-red-600 text-white border border-red-700 animate-pulse" :
+                                  c.priority === "High"     ? "bg-orange-50 text-orange-700 border border-orange-200" :
+                                  "bg-blue-50 text-blue-700 border border-blue-200"
+                                }`}>
+                                  {c.priority}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-xs text-foreground/90 font-medium leading-relaxed bg-background/50 p-2.5 rounded-lg border border-border-warm/40 line-clamp-2">
+                              {c.summary}
+                            </div>
+
+                            <div className="border-t border-border-warm/40 pt-2 flex flex-col gap-1 text-[10px]">
+                              <div className="flex justify-between items-center">
+                                <span className="text-foreground/45 font-semibold">Citizen:</span>
+                                <span className="font-bold text-foreground/85 truncate max-w-[130px]">{c.citizenName} ({c.citizenId})</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-foreground/45 font-semibold">External Entity:</span>
+                                <span className="font-bold text-gold/90 truncate max-w-[140px]">{c.externalEntity}</span>
+                              </div>
+                              {c.entityDepartment && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-foreground/45 font-semibold">Department:</span>
+                                  <span className="font-bold text-foreground/75">{c.entityDepartment}</span>
+                                </div>
+                              )}
+                              {c.liaisonOfficer && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-foreground/45 font-semibold">Liaison Officer:</span>
+                                  <span className="font-bold text-gold/80">{c.liaisonOfficer}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between items-center mt-1">
+                                <span className="text-foreground/45 font-semibold">SLA Remaining:</span>
+                                <span className={`font-mono text-[9.5px] font-bold ${
+                                  sla.label === "Breached" ? "text-red-600" :
+                                  sla.label === "At Risk" ? "text-orange-600" :
+                                  "text-foreground/70"
+                                }`}>
+                                  {c.slaHours !== undefined ? `${c.slaHours}h remaining` : "N/A"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-border-warm/40 pt-2 mt-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                  logs.length > 0 ? "bg-gold/20 text-gold" : "bg-foreground/5 text-foreground/30"
+                                }`}>
+                                  💬 {logs.length} Comms
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                {!isDone && (
+                                  <button
+                                    onClick={() => setLogDrawerCase(c)}
+                                    className="bg-gold hover:bg-gold-hover text-white px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer whitespace-nowrap"
+                                  >
+                                    Log Comm
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setViewingCase(c)}
+                                  className="bg-background border border-border-warm hover:border-gold text-foreground hover:text-gold px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap"
+                                >
+                                  View Case
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Master Table */
           <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-border-warm bg-foreground/[0.02] flex items-center justify-between">
               <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">Externally Assigned Cases</h2>
@@ -312,7 +541,19 @@ export default function ResolutionFollowUpPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredCases.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
           </div>
+        )}
 
         </main>
       </div>

@@ -127,10 +127,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Route based on role default dashboard
       if (userMatch.role === "Administrator") {
         router.push("/admin/users");
-      } else if (userMatch.role === "SBAExecutive") {
-        router.push("/executive");
       } else {
-        router.push("/");
+        router.push("/executive/ingestion");
       }
       return true;
     }

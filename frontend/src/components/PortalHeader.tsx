@@ -19,7 +19,7 @@ export function PortalHeader({
 }: PortalHeaderProps) {
   return (
     <header
-      className={`sticky top-0 z-30 w-full shrink-0 border-b border-border-warm/80 bg-background/95 backdrop-blur-md px-6 py-4 shadow-sm transition-all ${className}`}
+      className={`sticky top-0 z-30 w-full shrink-0 border-b border-border-warm/80 bg-background/95 backdrop-blur-md px-6 py-2.5 shadow-sm transition-all ${className}`}
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 min-h-[56px]">
         <div className="min-w-0 flex items-center gap-4">

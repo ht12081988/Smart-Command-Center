@@ -27,6 +27,20 @@ export interface TimelineEvent {
   actor: string;
   date: string;
   comment?: string;
+  isEmail?: boolean;
+  emailDetails?: {
+    from: string;
+    to: string;
+    subject: string;
+    body: string;
+    reply?: {
+      from: string;
+      to: string;
+      date: string;
+      body: string;
+    };
+    attachments?: { name: string; size: string }[];
+  };
 }
 
 export interface CaseDocument {
@@ -63,6 +77,7 @@ export interface Case {
   externalEntity: string;
   entityDepartment?: string;
   liaisonOfficer: string;
+  escalationOfficer?: string;
   
   // Sub-collections
   tasks: CaseTask[];
@@ -131,7 +146,29 @@ export const MOCK_CASES: Case[] = [
       { id: "TSK-102", title: "Wait for SHA approval", assignee: "Dr. Khalid M.", deadline: "Aug 26, 2026", status: "Pending" }
     ],
     timeline: [
-      { id: "TL-03", action: "Case Assigned to SHA", actor: "Command Center", date: "Aug 26, 2026, 09:00 AM", comment: "Please expedite approval." }
+      { id: "TL-03", action: "Case Assigned to SHA", actor: "Command Center", date: "Aug 26, 2026, 09:00 AM", comment: "Please expedite approval." },
+      {
+        id: "TL-EMAIL-1",
+        action: "Email Correspondence Logged",
+        actor: "System Inbound Router",
+        date: "Aug 26, 2026, 02:15 PM",
+        isEmail: true,
+        emailDetails: {
+          from: "case-9810@sba-command.ae",
+          to: "dr.khalid@sharjahhealth.gov.ae",
+          subject: "Urgent: Ruler Executive Directive referral - Case 9810 [SBA-9810]",
+          body: "Dear Dr. Khalid, \n\nWe have received an executive directive during today's live radio broadcast regarding the medical bills of citizen Ahmed Al-Suwaidi. Please review the attached medical file and confirm SHA fast-track clearance within 24 hours.",
+          reply: {
+            from: "dr.khalid@sharjahhealth.gov.ae",
+            to: "case-9810@sba-command.ae",
+            date: "Aug 26, 2026, 03:10 PM",
+            body: "Dear Command Center, \n\nI have received the directive. The file has been pushed to the Medical Approvals Committee. We will review the Al Qassimi Hospital records and upload the signed clearance once ready. See attached initial committee acknowledgement."
+          },
+          attachments: [
+            { name: "Initial_Committee_Acknowledgement.pdf", size: "320 KB" }
+          ]
+        }
+      }
     ],
     documents: []
   },
@@ -204,7 +241,52 @@ export const MOCK_CASES: Case[] = [
     createdAt: "2026-08-25",
     tasks: [],
     timeline: [
-      { id: "TL-08", action: "Case Created via HotLine", actor: "System", date: "Aug 25, 2026, 08:00 AM" }
+      { id: "TL-08", action: "Case Created via HotLine", actor: "System", date: "Aug 25, 2026, 08:00 AM" },
+      {
+        id: "TL-EMAIL-CIT",
+        action: "Citizen Email Received",
+        actor: "Mohammed Al-Shamsi",
+        date: "Aug 25, 2026, 09:30 AM",
+        isEmail: true,
+        emailDetails: {
+          from: "m.alshamsi@gmail.com",
+          to: "case-9413@sba-command.ae",
+          subject: "Regarding my job application support - Mohamad Al-Shamsi [SBA-9413]",
+          body: "Dear SBA Team, \n\nI am sending this email following my call to the Direct Line show regarding my job placement request. As mentioned, my factory closed down last month, and I support a family of 5 children. I have attached my updated CV and experience certificate for your review. Please let me know what the next step is.\n\nBest regards,\nMohammed Al-Shamsi",
+          attachments: [
+            { name: "Mohammed_AlShamsi_CV.pdf", size: "180 KB" }
+          ]
+        }
+      },
+      {
+        id: "TL-EMAIL-OWNER",
+        action: "Internal Case Update Sent",
+        actor: "Fatima Al-Suwaidi (Producer)",
+        date: "Aug 25, 2026, 11:00 AM",
+        isEmail: true,
+        emailDetails: {
+          from: "case-9413@sba-command.ae",
+          to: "m.alshamsi@gmail.com",
+          subject: "Re: Regarding my job application support - Mohamad Al-Shamsi [SBA-9413]",
+          body: "Dear Mohammed, \n\nWe have received your email and CV. We are forwarding your case files directly to our liaison officer at the Sharjah Human Resources Department. They will match your qualifications with active vacancies. We will keep you updated on their feedback.\n\nWarm regards,\nFatima Al-Suwaidi\nDirect Line Production Team"
+        }
+      },
+      {
+        id: "TL-EMAIL-ENTITY",
+        action: "External Liaison Response Logged",
+        actor: "Sharjah Human Resources Department",
+        date: "Aug 25, 2026, 03:45 PM",
+        isEmail: true,
+        emailDetails: {
+          from: "liaison@shrd.gov.ae",
+          to: "case-9413@sba-command.ae",
+          subject: "RE: Job placement assistance referral - Case 9413 [SBA-9413]",
+          body: "Dear Fatima, \n\nWe have received the referral for citizen Mohammed Al-Shamsi. We checked his CV and have flagged two potential matches: one in the Sharjah Municipality and one in the Sharjah Commerce Authority. We have scheduled an initial interview with him on August 30, 2026. Please see the attached interview appointment card.\n\nRegards,\nAisha Al-Ketbi\nLiaison Officer, SHRD",
+          attachments: [
+            { name: "Interview_Appointment_Card.pdf", size: "120 KB" }
+          ]
+        }
+      }
     ],
     documents: []
   },
@@ -410,12 +492,58 @@ const ENTITY_DEPARTMENTS: Record<string, string[]> = {
   "Sharjah Police General Directorate": ["Traffic & Licensing", "Community Policing", "Humanitarian Cases Desk"]
 };
 
-const ENTITY_LIAISONS: Record<string, string[]> = {
-  "Sharjah Health Authority": ["Dr. Khalid Al-Qasimi", "Dr. Maryam Al-Mansoori"],
-  "Sharjah Housing Directorate": ["Dr. Khalid M.", "Eng. Ahmed Al-Suwaidi"],
-  "Ministry of Community Development": ["Mariam Al Shamsi", "Hassan Al-Ali"],
-  "Sharjah Police General Directorate": ["Major Salem Al-Suwaidi", "Capt. Ali Al-Ketbi"]
+export const ENTITY_LIAISONS: Record<string, string[]> = {
+  "Sharjah Health Authority": ["Dr. Fatima Al-Suwaidi", "Dr. Saeed Omar", "Ahmed Salem"],
+  "Sharjah Housing Directorate": ["Eng. Ahmed Al-Suwaidi", "Eng. Khalid Al Qasimi", "Mariam Al-Hassani"],
+  "Ministry of Community Development": ["Aisha Al-Mansoori", "Tariq Al-Shamsi", "Hessa Al-Nuaimi"],
+  "Sharjah Police General Directorate": ["Col. Saeed Al Nuaimi", "Lt. Col. Mohammed Al Qasimi", "Capt. Sultan Al-Ketbi"]
 };
+
+export const ENTITY_ESCALATION_OFFICERS: Record<string, string[]> = {
+  "Sharjah Health Authority": ["Dr. Abdulaziz Al-Sarki (Director General)", "H.E. Chairman of SHA", "Dr. Ali Obaid (Head of Inspection)"],
+  "Sharjah Housing Directorate": ["H.E. Eng. Khalifa Al-Tunaiji (Director General)", "Eng. Ibrahim Al-Housani (CEO)", "H.E. Chairman of Housing Directorate"],
+  "Ministry of Community Development": ["H.E. Hessa Bint Essa Buhumaid (Undersecretary)", "Sultan Al-Junaibi (Executive Director)", "H.E. Minister of Community Development"],
+  "Sharjah Police General Directorate": ["Maj. Gen. Saif Zari Al Shamsi (Commander-in-Chief)", "Brig. Gen. Abdullah Mubarak (Deputy Commander)", "Col. Omar Al-Ghazal (Director of Inspection)"]
+};
+
+const KANBAN_COLUMNS = [
+  { 
+    title: "Triage & Review", 
+    statuses: ["New", "Under Review", "Awaiting Citizen"],
+    theme: {
+      bg: "bg-blue-500/[0.02] border-blue-500/15",
+      headerText: "text-blue-600 dark:text-blue-400",
+      badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+    }
+  },
+  { 
+    title: "Assigned & Active", 
+    statuses: ["Assigned", "In Progress"],
+    theme: {
+      bg: "bg-indigo-500/[0.02] border-indigo-500/15",
+      headerText: "text-indigo-600 dark:text-indigo-400",
+      badge: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+    }
+  },
+  { 
+    title: "Escalated", 
+    statuses: ["Escalated"],
+    theme: {
+      bg: "bg-red-500/[0.02] border-red-500/15",
+      headerText: "text-red-600 dark:text-red-400",
+      badge: "bg-red-500/10 text-red-600 dark:text-red-400 animate-pulse"
+    }
+  },
+  { 
+    title: "Resolved & Closed", 
+    statuses: ["Resolved", "Closed", "Reopened"],
+    theme: {
+      bg: "bg-green-500/[0.02] border-green-500/15",
+      headerText: "text-green-600 dark:text-green-400",
+      badge: "bg-green-500/10 text-green-600 dark:text-green-400"
+    }
+  }
+];
 
 export default function CaseManagementPage() {
   const router = useRouter();
@@ -423,7 +551,10 @@ export default function CaseManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [assignmentFilter, setAssignmentFilter] = useState<"All" | "Internal" | "External">("All");
+  const [cameFromNavigation, setCameFromNavigation] = useState(false);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [autoOpenStatus, setAutoOpenStatus] = useState(false);
+  const [autoOpenStatusVal, setAutoOpenStatusVal] = useState<CaseStatus>("New");
 
   const ALL_STATUSES = ["All", "New", "Assigned", "Under Review", "In Progress", "Await Citizen", "Escalated", "Resolved", "Closed", "Reopened"];
 
@@ -462,6 +593,7 @@ export default function CaseManagementPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
 
   useEffect(() => {
     setCurrentPage(1);
@@ -474,8 +606,9 @@ export default function CaseManagementPage() {
 
   const [showCreateCaseDrawer, setShowCreateCaseDrawer] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
+  const [highlightedCaseId, setHighlightedCaseId] = useState<string | null>(null);
   const [newCaseForm, setNewCaseForm] = useState({
-    citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New"
+    citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", escalationOfficer: "", status: "New"
   });
   const [showCitizenSuggestions, setShowCitizenSuggestions] = useState(false);
 
@@ -491,12 +624,13 @@ export default function CaseManagementPage() {
 
   const openCreateDrawer = () => {
     setEditingCaseId(null);
-    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New" });
+    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", escalationOfficer: "", status: "New" });
     setShowCreateCaseDrawer(true);
   };
 
   const openEditDrawer = (c: Case) => {
     setEditingCaseId(c.id);
+    const defaultEscalation = c.escalationOfficer || (ENTITY_ESCALATION_OFFICERS[c.externalEntity]?.[0] || "");
     setNewCaseForm({
       citizenName: c.citizenName,
       citizenId: c.citizenId,
@@ -511,6 +645,7 @@ export default function CaseManagementPage() {
       externalEntity: c.externalEntity,
       entityDepartment: c.entityDepartment || "",
       liaisonOfficer: c.liaisonOfficer,
+      escalationOfficer: defaultEscalation,
       status: c.status
     });
     setShowCreateCaseDrawer(true);
@@ -537,6 +672,7 @@ export default function CaseManagementPage() {
         externalEntity: newCaseForm.externalEntity || "TBD",
         entityDepartment: newCaseForm.entityDepartment || "TBD",
         liaisonOfficer: newCaseForm.liaisonOfficer || "TBD",
+        escalationOfficer: newCaseForm.status === "Escalated" ? (newCaseForm.escalationOfficer || ENTITY_ESCALATION_OFFICERS[newCaseForm.externalEntity]?.[0]) : newCaseForm.escalationOfficer,
         status: newCaseForm.status as CaseStatus,
         summary: newCaseForm.summary,
         facts: newCaseForm.facts
@@ -559,6 +695,7 @@ export default function CaseManagementPage() {
       externalEntity: newCaseForm.externalEntity || "TBD",
       entityDepartment: newCaseForm.entityDepartment || "TBD",
       liaisonOfficer: newCaseForm.liaisonOfficer || "TBD",
+      escalationOfficer: newCaseForm.status === "Escalated" ? (newCaseForm.escalationOfficer || ENTITY_ESCALATION_OFFICERS[newCaseForm.externalEntity]?.[0]) : newCaseForm.escalationOfficer,
       tasks: [],
       timeline: [
         {
@@ -571,9 +708,11 @@ export default function CaseManagementPage() {
       documents: []
       };
       setCases([newCase, ...cases]);
+      setHighlightedCaseId(newCase.id);
+      setTimeout(() => setHighlightedCaseId(null), 3000);
     }
     setShowCreateCaseDrawer(false);
-    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", status: "New" });
+    setNewCaseForm({ citizenName: "", citizenId: "", primaryClassification: "General Inquiry", secondaryClassification: "", priority: "Standard", slaHours: "", alertDate: "", summary: "", facts: "", caseOwner: user?.fullName || "Current User", externalEntity: "", entityDepartment: "", liaisonOfficer: "", escalationOfficer: "", status: "New" });
   };
 
   const handleUpdateCase = (updatedCase: Case) => {
@@ -595,19 +734,75 @@ export default function CaseManagementPage() {
     }
   };
 
+  const handleKanbanDrop = (caseId: string, targetStatus: CaseStatus) => {
+    const targetCase = cases.find(c => c.id === caseId);
+    if (!targetCase) return;
+    if (targetCase.status === targetStatus) return;
+
+    // Check if target status requires validation routing or resolution details:
+    const isAssigned = targetStatus === "Assigned";
+    const isResolvedOrClosed = targetStatus === "Resolved" || targetStatus === "Closed";
+
+    if (isAssigned || isResolvedOrClosed) {
+      setSelectedCase(targetCase);
+      setAutoOpenStatusVal(targetStatus);
+      setAutoOpenStatus(true);
+    } else {
+      const newEvent: TimelineEvent = {
+        id: `TL-${Math.floor(Math.random() * 1000)}`,
+        action: `Status changed to ${targetStatus} via Kanban Board`,
+        actor: user?.fullName || "Current User",
+        date: new Date().toLocaleString(),
+        comment: `Dragged card to the ${targetStatus} column.`
+      };
+      
+      const updatedCase: Case = {
+        ...targetCase,
+        status: targetStatus,
+        timeline: [...targetCase.timeline, newEvent]
+      };
+
+      if (targetStatus === "New" || targetStatus === "Under Review") {
+        updatedCase.externalEntity = "";
+        updatedCase.entityDepartment = "";
+        updatedCase.liaisonOfficer = "";
+      }
+
+      handleUpdateCase(updatedCase);
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       <Suspense fallback={null}>
         <SearchParamsHandler onAction={(action, params) => {
           if (action === "new" && !showCreateCaseDrawer) {
             if (params.get("autofill") === "true") {
+              const summaryParam = params.get("summary") || "";
               setNewCaseForm(prev => ({
                 ...prev,
                 citizenName: params.get("name") || "",
-                summary: params.get("summary") || ""
+                citizenId: params.get("citizenId") || prev.citizenId,
+                summary: summaryParam,
+                primaryClassification: params.get("category") || prev.primaryClassification || "Housing",
+                externalEntity: params.get("dept") || prev.externalEntity || "Sharjah Housing Directorate",
+                entityDepartment: params.get("subDept") || prev.entityDepartment,
+                liaisonOfficer: params.get("liaison") || prev.liaisonOfficer,
+                slaHours: params.get("sla") || prev.slaHours,
+                alertDate: params.get("date") || prev.alertDate,
+                priority: summaryParam.toLowerCase().includes("directive") ? "Critical" : "Standard",
+                status: "Assigned"
               }));
             }
             setShowCreateCaseDrawer(true);
+            router.replace("/cases");
+          } else if (action === "view" && params.get("id")) {
+            const targetId = params.get("id");
+            const targetCase = cases.find(c => c.id === targetId);
+            if (targetCase) {
+              setSelectedCase(targetCase);
+              setCameFromNavigation(true);
+            }
             router.replace("/cases");
           }
         }} />
@@ -689,95 +884,251 @@ export default function CaseManagementPage() {
               </button>
             ))}
           </div>
+
+          {/* View Mode Toggle (List vs. Kanban Board) */}
+          <div className="flex items-center gap-1 bg-card border border-border-warm rounded-xl p-1 shrink-0">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${
+                viewMode === "list"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${
+                viewMode === "kanban"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+              </svg>
+              Kanban
+            </button>
+          </div>
         </section>
 
-        {/* Main Table List */}
-        <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
-            <thead className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 shadow-sm">
-              <tr className="border-b border-border-warm text-foreground/50 font-semibold text-xs uppercase tracking-wider">
-                <th className="py-4 px-6">Case Reference</th>
-                <th className="py-4 px-6">Citizen</th>
-                <th className="py-4 px-6">Category / Entity</th>
-                <th className="py-4 px-6 text-center">Priority & Status</th>
-                <th className="py-4 px-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-warm">
-              {paginatedCases.map((c) => (
-                <tr key={c.id} className="hover:bg-background/25 transition-colors group">
-                  <td className="py-4 px-6">
-                    <span className="font-bold text-primary-text-gold block mb-0.5">{c.id}</span>
-                    <span className="text-[10px] text-foreground/50 uppercase tracking-widest">{c.feedSource}</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-foreground/90 font-bold block mb-0.5">{c.citizenName}</span>
-                    <span className="text-[10px] text-foreground/40 font-mono">{c.citizenId}</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-foreground/80 block mb-0.5 font-medium">{c.primaryClassification}</span>
-                    <span className="text-[10px] text-foreground/50 uppercase tracking-widest">{c.externalEntity}</span>
-                  </td>
-                  <td className="py-4 px-6 text-center">
-                    <div className="flex flex-col items-center gap-1.5">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                        c.priority === "Critical" ? "bg-red-600 text-white border border-red-700 animate-pulse" :
-                        c.priority === "High" ? "bg-red-50 text-red-700 border border-red-200" :
-                        "bg-blue-50 text-blue-700 border border-blue-200"
-                      }`}>
-                        {c.priority} Priority
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                        c.status === "Resolved" || c.status === "Closed" ? "bg-green-50 text-green-700" :
-                        c.status === "New" ? "bg-purple-50 text-purple-700" :
-                        "bg-foreground/10 text-foreground/70"
-                      }`}>
-                        {c.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setSelectedCase(c)}
-                        className="bg-background border border-border-warm hover:border-gold text-foreground hover:text-gold px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
-                      >
-                        Manage
-                      </button>
-                      <button
-                        onClick={() => openEditDrawer(c)}
-                        className="p-1.5 text-foreground/40 hover:text-gold transition-colors"
-                        title="Edit Case"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCase(c.id)}
-                        className="p-1.5 text-foreground/40 hover:text-red-500 transition-colors"
-                        title="Delete Case"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
-                    </div>
-                  </td>
+        {/* Main Table List vs. Kanban Board View */}
+        {viewMode === "list" ? (
+          <section className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-sm flex flex-col shrink-0">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
+              <thead className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 shadow-sm">
+                <tr className="border-b border-border-warm text-foreground/50 font-semibold text-xs uppercase tracking-wider">
+                  <th className="py-4 px-6">Case Reference</th>
+                  <th className="py-4 px-6">Citizen</th>
+                  <th className="py-4 px-6">Category / Entity</th>
+                  <th className="py-4 px-6 text-center">Priority & Status</th>
+                  <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border-warm">
+                {paginatedCases.map((c) => (
+                  <tr key={c.id} className={`transition-colors group ${c.id === highlightedCaseId ? 'bg-gold/10 animate-[pulse_1.5s_ease-in-out_infinite]' : 'hover:bg-background/25'}`}>
+                    <td className="py-4 px-6">
+                      <span className="font-bold text-primary-text-gold block mb-0.5">{c.id}</span>
+                      <span className="text-[10px] text-foreground/50 uppercase tracking-widest">{c.feedSource}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-foreground/90 font-bold block mb-0.5">{c.citizenName}</span>
+                      <span className="text-[10px] text-foreground/40 font-mono">{c.citizenId}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-foreground/80 block mb-0.5 font-medium">{c.primaryClassification}</span>
+                      <span className="text-[10px] text-foreground/50 uppercase tracking-widest">{c.externalEntity}</span>
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                          c.priority === "Critical" ? "bg-red-600 text-white border border-red-700 animate-pulse" :
+                          c.priority === "High" ? "bg-red-50 text-red-700 border border-red-200" :
+                          "bg-blue-50 text-blue-700 border border-blue-200"
+                        }`}>
+                          {c.priority} Priority
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                          c.status === "Resolved" || c.status === "Closed" ? "bg-green-50 text-green-700" :
+                          c.status === "New" ? "bg-purple-50 text-purple-700" :
+                          "bg-foreground/10 text-foreground/70"
+                        }`}>
+                          {c.status}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setSelectedCase(c)}
+                          className="bg-background border border-border-warm hover:border-gold text-foreground hover:text-gold px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
+                        >
+                          Manage
+                        </button>
+                        <button
+                          onClick={() => openEditDrawer(c)}
+                          className="p-1.5 text-foreground/40 hover:text-gold transition-colors"
+                          title="Edit Case"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCase(c.id)}
+                          className="p-1.5 text-foreground/40 hover:text-red-500 transition-colors"
+                          title="Delete Case"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredCases.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
+          </section>
+        ) : (
+          /* Kanban Board Layout Column Grid */
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 flex-1 min-h-[500px]">
+            {KANBAN_COLUMNS.map(col => {
+              const colCases = filteredCases.filter(c => col.statuses.includes(c.status));
+              return (
+                <div 
+                  key={col.title} 
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    const caseId = e.dataTransfer.getData("text/plain");
+                    handleKanbanDrop(caseId, col.statuses[0] as CaseStatus);
+                  }}
+                  className={`flex flex-col gap-3 border rounded-2xl p-2.5 min-h-[450px] transition-colors ${col.theme.bg}`}
+                >
+                  <div className="flex justify-between items-center border-b border-border-warm pb-2 shrink-0">
+                    <span className={`font-bold text-xs uppercase tracking-wider flex items-center gap-2 ${col.theme.headerText}`}>
+                      {col.title}
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${col.theme.badge}`}>
+                        {colCases.length}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 pr-1.5 pl-0.5 py-1 max-h-[66vh] custom-kanban-scrollbar">
+                    <style>{`
+                      .custom-kanban-scrollbar::-webkit-scrollbar {
+                        width: 4px;
+                        height: 4px;
+                      }
+                      .custom-kanban-scrollbar::-webkit-scrollbar-track {
+                        background: transparent;
+                      }
+                      .custom-kanban-scrollbar::-webkit-scrollbar-thumb {
+                        background: transparent;
+                        border-radius: 99px;
+                      }
+                      .custom-kanban-scrollbar:hover::-webkit-scrollbar-thumb {
+                        background: rgba(188, 147, 90, 0.25);
+                      }
+                      .custom-kanban-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+                        background: rgba(188, 147, 90, 0.55);
+                      }
+                    `}</style>
+                    {colCases.length === 0 ? (
+                      <div className="text-center py-16 text-foreground/30 text-[10px] font-bold uppercase tracking-wider border border-dashed border-border-warm/40 rounded-xl">
+                        No Active Cases
+                      </div>
+                    ) : (
+                      colCases.map(c => (
+                        <div 
+                          key={c.id} 
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", c.id);
+                          }}
+                          className={`bg-card border rounded-xl p-3 transition-all flex flex-col gap-2 group relative cursor-grab active:cursor-grabbing ${c.id === highlightedCaseId ? 'ring-2 ring-gold border-gold bg-gold/10 shadow-lg animate-[pulse_1.5s_ease-in-out_infinite]' : 'border-border-warm hover:border-gold/45 shadow-xs hover:shadow-md'}`}
+                        >
+                          
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <span className="font-bold text-xs text-primary-text-gold block mb-0.5">{c.id}</span>
+                              <span className="text-[9px] text-foreground/45 uppercase tracking-widest font-bold">{c.feedSource}</span>
+                            </div>
+                            
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                                c.priority === "Critical" ? "bg-red-600 text-white border border-red-700 animate-pulse" :
+                                c.priority === "High" ? "bg-red-50 text-red-700 border border-red-200" :
+                                "bg-blue-50 text-blue-700 border border-blue-200"
+                              }`}>
+                                {c.priority}
+                              </span>
+                              <span className="text-[9px] font-bold text-gold/80">{c.status}</span>
+                            </div>
+                          </div>
+
+                          <div className="text-xs leading-relaxed text-foreground/80 line-clamp-2">
+                            {c.summary}
+                          </div>
+
+                          <div className="border-t border-border-warm/50 pt-2 flex flex-col gap-1 text-[10px]">
+                            <div className="flex justify-between">
+                              <span className="text-foreground/45 font-semibold">Citizen:</span>
+                              <span className="font-bold text-foreground/85 truncate max-w-[140px]">{c.citizenName}</span>
+                            </div>
+                            {c.externalEntity && (
+                              <div className="flex justify-between">
+                                <span className="text-foreground/45 font-semibold">Assigned To:</span>
+                                <span className="font-bold text-foreground/85 truncate max-w-[130px]">{c.externalEntity}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 border-t border-border-warm/50 pt-1.5 mt-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setSelectedCase(c)}
+                              className="bg-foreground text-background hover:bg-gold hover:text-white px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors"
+                            >
+                              Manage
+                            </button>
+                            <button
+                              onClick={() => openEditDrawer(c)}
+                              className="p-1.5 rounded hover:bg-foreground/5 text-foreground/40 hover:text-gold transition-colors"
+                              title="Edit Case"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCase(c.id)}
+                              className="p-1.5 rounded hover:bg-red-50 text-foreground/40 hover:text-red-600 transition-colors"
+                              title="Delete Case"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                          
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredCases.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setCurrentPage(1);
-            }}
-          />
-        </section>
+        )}
       </main>
     </div>
 
@@ -785,9 +1136,18 @@ export default function CaseManagementPage() {
       {selectedCase && (
         <CaseDetailWorkspace 
           activeCase={selectedCase} 
-          onClose={() => setSelectedCase(null)} 
+          onClose={() => {
+            setSelectedCase(null);
+            setAutoOpenStatus(false);
+            if (cameFromNavigation) {
+              setCameFromNavigation(false);
+              router.back();
+            }
+          }} 
           onUpdateCase={handleUpdateCase}
           onUpdateStatus={(status, comment) => handleUpdateCaseStatus(selectedCase.id, status, comment)}
+          autoOpenStatusModal={autoOpenStatus}
+          defaultStatusForModal={autoOpenStatusVal}
         />
       )}
 
@@ -796,7 +1156,7 @@ export default function CaseManagementPage() {
         <div className="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-[450px] bg-card h-full shadow-2xl flex flex-col border-l border-border-warm animate-in slide-in-from-right duration-300">
             <header className="px-6 py-5 border-b border-border-warm flex justify-between items-center bg-background shrink-0">
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">{editingCaseId ? `Edit ${editingCaseId}` : "Create Case"}</h2>
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">{editingCaseId ? `Edit ${editingCaseId}` : newCaseForm.status === "Assigned" ? "Update Case" : "Create Case"}</h2>
               <button onClick={() => setShowCreateCaseDrawer(false)} className="text-foreground/40 hover:text-foreground">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -805,6 +1165,23 @@ export default function CaseManagementPage() {
             </header>
             
             <form onSubmit={handleCreateCaseSubmit} className="p-6 flex flex-col gap-5 flex-1 overflow-y-auto">
+              {/* Royal Directive / Live Ingestion Quote Banner */}
+              {newCaseForm.summary && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 flex flex-col gap-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                      <span>👑 Royal Verbal Directive Text</span>
+                    </span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                      Live Ingest Feed
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground/90 italic font-medium leading-relaxed bg-background/80 p-2.5 rounded-lg border border-amber-500/20">
+                    "{newCaseForm.summary}"
+                  </p>
+                </div>
+              )}
+
               <div className="relative">
                 <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Citizen Name</label>
                 <input 
@@ -878,7 +1255,19 @@ export default function CaseManagementPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Priority</label>
-                  <select required value={newCaseForm.priority} onChange={e => setNewCaseForm({...newCaseForm, priority: e.target.value, slaHours: "", alertDate: ""})} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold">
+                  <select required value={newCaseForm.priority} onChange={e => {
+                    const newPriority = e.target.value;
+                    let newSla = "";
+                    let newDate = "";
+                    if (newPriority === "Critical") newSla = "5";
+                    else if (newPriority === "High") newSla = "24";
+                    else if (newPriority === "Standard") {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 3);
+                      newDate = d.toISOString().split('T')[0];
+                    }
+                    setNewCaseForm({...newCaseForm, priority: newPriority, slaHours: newSla, alertDate: newDate});
+                  }} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold">
                     <option value="Critical">Critical Priority</option>
                     <option value="High">High Priority</option>
                     <option value="Standard">Standard Priority</option>
@@ -886,7 +1275,11 @@ export default function CaseManagementPage() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-foreground/60 uppercase tracking-widest mb-2">Status</label>
-                  <select required value={newCaseForm.status} onChange={e => setNewCaseForm({...newCaseForm, status: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold">
+                  <select required value={newCaseForm.status} onChange={e => {
+                    const st = e.target.value;
+                    const defaultEscalation = st === "Escalated" ? (newCaseForm.escalationOfficer || ENTITY_ESCALATION_OFFICERS[newCaseForm.externalEntity]?.[0] || "") : newCaseForm.escalationOfficer;
+                    setNewCaseForm({...newCaseForm, status: st, escalationOfficer: defaultEscalation});
+                  }} className="w-full px-3 py-2 rounded-xl border border-border-warm bg-background text-sm focus:outline-none focus:border-gold">
                     <option value="New">New</option>
                     <option value="Under Review">Under Review</option>
                     <option value="Awaiting Citizen">Awaiting Citizen</option>
@@ -960,6 +1353,7 @@ export default function CaseManagementPage() {
                 
                 {(() => {
                   const isAssigned = newCaseForm.status === "Assigned";
+                  const isEscalated = newCaseForm.status === "Escalated";
                   return (
                     <>
                       <div className="grid grid-cols-1 gap-4 mb-4">
@@ -981,24 +1375,26 @@ export default function CaseManagementPage() {
 
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                          <label className={`block text-[10px] font-bold uppercase tracking-widest mb-2 ${isAssigned ? "text-red-600" : "text-foreground/60"}`}>
-                            External Entity {isAssigned && "*"}
+                          <label className={`block text-[10px] font-bold uppercase tracking-widest mb-2 ${(isAssigned || isEscalated) ? "text-red-600" : "text-foreground/60"}`}>
+                            External Entity {(isAssigned || isEscalated) && "*"}
                           </label>
                           <select 
-                            required={isAssigned}
+                            required={isAssigned || isEscalated}
                             value={newCaseForm.externalEntity} 
                             onChange={e => {
                               const entity = e.target.value;
                               const defaultDept = ENTITY_DEPARTMENTS[entity]?.[0] || "";
                               const defaultLiaison = ENTITY_LIAISONS[entity]?.[0] || "";
+                              const defaultEscalation = ENTITY_ESCALATION_OFFICERS[entity]?.[0] || "";
                               setNewCaseForm({
                                 ...newCaseForm, 
                                 externalEntity: entity, 
                                 entityDepartment: defaultDept,
-                                liaisonOfficer: defaultLiaison
+                                liaisonOfficer: defaultLiaison,
+                                escalationOfficer: defaultEscalation
                               });
                             }} 
-                            className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${isAssigned && !newCaseForm.externalEntity ? "border-red-300 focus:border-red-500" : "border-border-warm"}`}
+                            className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${(isAssigned || isEscalated) && !newCaseForm.externalEntity ? "border-red-300 focus:border-red-500" : "border-border-warm"}`}
                           >
                             <option value="">Select Entity...</option>
                             <option value="Sharjah Health Authority">Sharjah Health Authority</option>
@@ -1055,6 +1451,36 @@ export default function CaseManagementPage() {
                           )}
                         </select>
                       </div>
+
+                      {/* Escalation Officer Field when Status is Escalated */}
+                      {isEscalated && (
+                        <div className="mt-4 bg-red-500/10 border border-red-500/30 p-3.5 rounded-xl flex flex-col gap-2 animate-in fade-in duration-200">
+                          <label className="block text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-widest flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Escalation Officer * (Required for Escalation)
+                          </label>
+                          <select 
+                            required
+                            value={newCaseForm.escalationOfficer || (ENTITY_ESCALATION_OFFICERS[newCaseForm.externalEntity]?.[0] || "")} 
+                            onChange={e => setNewCaseForm({...newCaseForm, escalationOfficer: e.target.value})} 
+                            className="w-full px-3 py-2 rounded-xl border border-red-300 bg-background text-sm font-bold focus:outline-none focus:border-red-500 text-foreground"
+                            disabled={!newCaseForm.externalEntity}
+                          >
+                            {!newCaseForm.externalEntity ? (
+                              <option value="">Select Entity First...</option>
+                            ) : (
+                              <>
+                                <option value="">Select Escalation Officer...</option>
+                                {ENTITY_ESCALATION_OFFICERS[newCaseForm.externalEntity]?.map(officer => (
+                                  <option key={officer} value={officer}>{officer}</option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      )}
                     </>
                   );
                 })()}
@@ -1071,7 +1497,7 @@ export default function CaseManagementPage() {
               </div>
               <div className="mt-4 pt-4 border-t border-border-warm flex justify-end gap-3">
                 <button type="button" onClick={() => setShowCreateCaseDrawer(false)} className="px-4 py-2 rounded-lg text-xs font-bold text-foreground/60 uppercase tracking-widest hover:text-foreground transition-colors">Cancel</button>
-                <button type="submit" className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">{editingCaseId ? "Save Changes" : "Create Case"}</button>
+                <button type="submit" className="bg-gold hover:bg-gold-hover text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">{editingCaseId ? "Save Changes" : newCaseForm.status === "Assigned" ? "Update Case" : "Create Case"}</button>
               </div>
             </form>
           </div>
@@ -1080,6 +1506,27 @@ export default function CaseManagementPage() {
     </div>
   );
 }
+
+const getActorRoleBadge = (actor: string, activeCase: Case) => {
+  const normActor = actor.toLowerCase();
+  const normCitizen = activeCase.citizenName.toLowerCase();
+  const normOwner = activeCase.caseOwner.toLowerCase();
+  const normLiaison = activeCase.liaisonOfficer?.toLowerCase() || "";
+
+  if (normActor.includes("system") || normActor === "command center" || normActor.includes("router")) {
+    return { label: "System", style: "bg-foreground/5 text-foreground/60 border-foreground/10" };
+  }
+  if (normActor.includes(normCitizen) || normCitizen.includes(normActor)) {
+    return { label: "Citizen", style: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" };
+  }
+  if (normActor.includes(normOwner) || normOwner.includes(normActor) || normActor.includes("producer") || normActor.includes("officer") || normActor.includes("admin")) {
+    return { label: "Case Owner", style: "bg-gold/15 text-primary-text-gold border-gold/30" };
+  }
+  if (normActor.includes(normLiaison) || normLiaison.includes(normActor) || normActor.includes("liaison") || normActor.includes("department") || normActor.includes("authority") || normActor.includes("shrd") || normActor.includes("officer")) {
+    return { label: "External Entity", style: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25" };
+  }
+  return { label: "Case Worker", style: "bg-foreground/5 text-foreground/75 border-foreground/10" };
+};
 
 const TAB_PERMISSIONS: Record<string, {
   allowedTabs: string[];
@@ -1115,12 +1562,16 @@ export function CaseDetailWorkspace({
   activeCase, 
   onClose,
   onUpdateCase,
-  onUpdateStatus
+  onUpdateStatus,
+  autoOpenStatusModal = false,
+  defaultStatusForModal
 }: { 
   activeCase: Case, 
   onClose: () => void,
   onUpdateCase: (updatedCase: Case) => void,
-  onUpdateStatus: (status: CaseStatus, comment: string) => void
+  onUpdateStatus: (status: CaseStatus, comment: string) => void,
+  autoOpenStatusModal?: boolean,
+  defaultStatusForModal?: CaseStatus
 }) {
   const { user } = useAuth();
   
@@ -1153,9 +1604,29 @@ export function CaseDetailWorkspace({
   const [tempExternalEntity, setTempExternalEntity] = useState(activeCase.externalEntity || "");
   const [tempEntityDepartment, setTempEntityDepartment] = useState(activeCase.entityDepartment || "");
   const [tempLiaisonOfficer, setTempLiaisonOfficer] = useState(activeCase.liaisonOfficer || "");
+  const [tempEscalationOfficer, setTempEscalationOfficer] = useState(activeCase.escalationOfficer || "");
   
   // Attached Proof File state
   const [attachedFile, setAttachedFile] = useState<string>("");
+  
+  // Expanded states for email logs
+  const [expandedEmailEvents, setExpandedEmailEvents] = useState<Record<string, boolean>>({});
+
+  const toggleEmailExpand = (eventId: string) => {
+    setExpandedEmailEvents(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
+
+  useEffect(() => {
+    if (autoOpenStatusModal) {
+      setShowStatusModal(true);
+      if (defaultStatusForModal) {
+        setNewStatus(defaultStatusForModal);
+      }
+    }
+  }, [autoOpenStatusModal, defaultStatusForModal]);
 
   useEffect(() => {
     if (showStatusModal) {
@@ -1163,6 +1634,7 @@ export function CaseDetailWorkspace({
       setTempExternalEntity(activeCase.externalEntity || "");
       setTempEntityDepartment(activeCase.entityDepartment || "");
       setTempLiaisonOfficer(activeCase.liaisonOfficer || "");
+      setTempEscalationOfficer(activeCase.escalationOfficer || (ENTITY_ESCALATION_OFFICERS[activeCase.externalEntity]?.[0] || ""));
       setAttachedFile("");
     }
   }, [showStatusModal, activeCase]);
@@ -1233,10 +1705,13 @@ export function CaseDetailWorkspace({
     };
 
     // 3. Conditionally attach external routing details
-    if (isAssigned) {
+    if (isAssigned || newStatus === "Escalated") {
       updatedCase.externalEntity = tempExternalEntity;
       updatedCase.entityDepartment = tempEntityDepartment;
       updatedCase.liaisonOfficer = tempLiaisonOfficer;
+      if (newStatus === "Escalated") {
+        updatedCase.escalationOfficer = tempEscalationOfficer || (ENTITY_ESCALATION_OFFICERS[tempExternalEntity]?.[0] || "");
+      }
     }
 
     // 4. Conditionally attach proof of resolution document
@@ -1420,12 +1895,43 @@ export function CaseDetailWorkspace({
                     </div>
                     <svg className="w-5 h-5 text-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                   </div>
-                  <div className="flex items-center justify-between pb-2">
+                  <div className="flex items-center justify-between border-b border-border-warm/50 pb-4">
                     <div>
                       <span className="block text-[9px] text-foreground/40 uppercase tracking-widest font-bold mb-0.5">Liaison Officer</span>
                       <span className="text-sm font-bold text-foreground">{activeCase.liaisonOfficer}</span>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-background border border-border-warm text-foreground/60 flex items-center justify-center font-bold text-xs">LO</div>
+                  </div>
+                  {(activeCase.escalationOfficer || activeCase.status === "Escalated") && (
+                    <div className="flex items-center justify-between border-b border-border-warm/50 pb-4 bg-red-500/5 p-3 rounded-xl border border-red-500/20">
+                      <div>
+                        <span className="block text-[9px] text-red-600 dark:text-red-400 uppercase tracking-widest font-bold mb-0.5">Escalation Officer (Executive)</span>
+                        <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                          {activeCase.escalationOfficer || (ENTITY_ESCALATION_OFFICERS[activeCase.externalEntity]?.[0] || "Executive Director")}
+                        </span>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-xs animate-pulse">EO</div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="block text-[9px] text-foreground/40 uppercase tracking-widest font-bold mb-0.5">Case Inbound Email Channel</span>
+                      <span className="text-sm font-bold text-indigo-500 font-mono">
+                        {`case-${activeCase.id.toLowerCase().replace("case-", "")}@sba-command.ae`}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`case-${activeCase.id.toLowerCase().replace("case-", "")}@sba-command.ae`);
+                        alert("Inbound email address copied to clipboard!");
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-foreground/5 text-foreground/45 hover:text-gold transition-colors"
+                      title="Copy Inbound Address"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </section>
@@ -1627,29 +2133,143 @@ export function CaseDetailWorkspace({
                 </div>
               </div>
               <div className="flex flex-col gap-6 relative pl-6 border-l-2 border-border-warm/50 ml-3">
-                {activeCase.timeline.map((event, idx) => (
-                  <div key={event.id} className="relative">
-                    {/* Timeline dot */}
-                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-card border-[4px] border-gold"></div>
-                    
-                    <div className="bg-card border border-border-warm p-4 rounded-xl shadow-sm hover:border-gold/30 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[11px] font-bold text-foreground uppercase tracking-widest bg-background px-2 py-1 rounded border border-border-warm">
-                          {event.action}
-                        </span>
-                        <span className="text-[10px] text-foreground/50 font-bold tracking-widest uppercase">{event.date}</span>
+                {activeCase.timeline.map((event, idx) => {
+                  const isExpanded = expandedEmailEvents[event.id] || false;
+                  return (
+                    <div key={event.id} className="relative">
+                      {/* Timeline dot */}
+                      <div className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-card border-[4px] ${event.isEmail ? "border-indigo-500" : "border-gold"}`}></div>
+                      
+                      <div className="bg-card border border-border-warm p-4 rounded-xl shadow-sm hover:border-gold/30 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${
+                              event.isEmail 
+                                ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-500" 
+                                : "bg-background border-border-warm text-foreground"
+                            }`}>
+                              {event.action}
+                            </span>
+                            {event.isEmail && (
+                              <span className="text-[10px] font-black text-indigo-500 bg-indigo-500/5 px-2 py-0.5 rounded-full border border-indigo-500/10">
+                                ✉️ Email Thread
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-foreground/50 font-bold tracking-widest uppercase">{event.date}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-bold text-foreground/65 uppercase tracking-widest">
+                            By: {event.actor}
+                          </span>
+                          {(() => {
+                            const badge = getActorRoleBadge(event.actor, activeCase);
+                            return (
+                              <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${badge.style}`}>
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Standard Timeline Event Comment */}
+                        {!event.isEmail && event.comment && (
+                          <p className="text-sm text-foreground/80 leading-relaxed bg-background p-3 rounded-lg border border-border-warm italic">
+                            "{event.comment}"
+                          </p>
+                        )}
+
+                        {/* Special Email Pipeline Event Rendering */}
+                        {event.isEmail && event.emailDetails && (
+                          <div className="flex flex-col gap-3 mt-2 bg-background/50 border border-border-warm/80 rounded-xl p-3.5">
+                            
+                            {/* Summary row */}
+                            <div className="flex justify-between items-center">
+                              <div className="min-w-0">
+                                <span className="block text-[10px] font-bold text-foreground/45 uppercase tracking-widest mb-0.5">Subject</span>
+                                <span className="text-xs font-bold text-foreground/85 block truncate max-w-[450px]">
+                                  {event.emailDetails.subject}
+                                </span>
+                              </div>
+                              <button 
+                                onClick={() => toggleEmailExpand(event.id)}
+                                className="px-3 py-1.5 rounded-lg border border-border-warm hover:border-gold text-[9px] font-bold uppercase tracking-wider bg-card text-foreground transition-colors shrink-0 flex items-center gap-1"
+                              >
+                                {isExpanded ? "Hide Message" : "Show Full Thread"}
+                                <svg className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            {/* Collapsed snippet */}
+                            {!isExpanded && (
+                              <div className="text-xs text-foreground/50 italic line-clamp-1 border-t border-border-warm/40 pt-2">
+                                {event.emailDetails.body}
+                              </div>
+                            )}
+
+                            {/* Expanded Full Mail & Thread View */}
+                            {isExpanded && (
+                              <div className="flex flex-col gap-4 border-t border-border-warm/50 pt-3 animate-in fade-in duration-200">
+                                
+                                {/* Outbound Message */}
+                                <div className="flex flex-col gap-2 bg-card border border-border-warm/60 rounded-xl p-3">
+                                  <div className="flex justify-between items-center text-[10px] text-foreground/50 border-b border-border-warm/40 pb-1.5">
+                                    <span>From: <strong className="text-foreground/75 font-mono">{event.emailDetails.from}</strong></span>
+                                    <span>To: <strong className="text-foreground/75 font-mono">{event.emailDetails.to}</strong></span>
+                                  </div>
+                                  <p className="text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">
+                                    {event.emailDetails.body}
+                                  </p>
+                                </div>
+
+                                {/* Inbound Reply Message (Nested) */}
+                                {event.emailDetails.reply && (
+                                  <div className="flex flex-col gap-2 bg-indigo-500/[0.02] border border-indigo-500/15 rounded-xl p-3 ml-6 relative">
+                                    {/* Indented Thread Indicator Line */}
+                                    <div className="absolute left-[-16px] top-0 bottom-0 w-[2px] bg-indigo-500/20"></div>
+                                    <div className="flex justify-between items-center text-[10px] text-foreground/50 border-b border-border-warm/40 pb-1.5">
+                                      <span>From: <strong className="text-indigo-600 dark:text-indigo-400 font-mono">{event.emailDetails.reply.from}</strong></span>
+                                      <span>Date: <strong className="text-foreground/75">{event.emailDetails.reply.date}</strong></span>
+                                    </div>
+                                    <p className="text-xs leading-relaxed text-foreground/85 whitespace-pre-wrap">
+                                      {event.emailDetails.reply.body}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Attachments Section inside the same event */}
+                                {event.emailDetails.attachments && event.emailDetails.attachments.length > 0 && (
+                                  <div className="border-t border-border-warm/50 pt-2.5">
+                                    <span className="block text-[9px] text-foreground/45 uppercase tracking-widest font-black mb-1.5">Attached Files (Inbound Mail)</span>
+                                    <div className="flex flex-wrap gap-2">
+                                      {event.emailDetails.attachments.map((file: { name: string; size: string }, fidx: number) => (
+                                        <div key={fidx} className="flex items-center gap-2 bg-card border border-border-warm hover:border-gold rounded-lg px-2.5 py-1.5 shadow-2xs transition-colors group cursor-pointer">
+                                          <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 00-2-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                          </svg>
+                                          <div className="flex flex-col">
+                                            <span className="text-[10px] font-bold text-foreground/80 group-hover:text-gold transition-colors">{file.name}</span>
+                                            <span className="text-[8px] text-foreground/40 font-mono mt-0.5">{file.size}</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                              </div>
+                            )}
+
+                          </div>
+                        )}
+
                       </div>
-                      <div className="text-[10px] font-bold text-primary-text-gold uppercase tracking-widest mb-2">
-                        By: {event.actor}
-                      </div>
-                      {event.comment && (
-                        <p className="text-sm text-foreground/80 leading-relaxed bg-background p-3 rounded-lg border border-border-warm italic">
-                          "{event.comment}"
-                        </p>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1856,6 +2476,63 @@ export function CaseDetailWorkspace({
                         <>
                           <option value="">Select Liaison Officer...</option>
                           {ENTITY_LIAISONS[tempExternalEntity]?.map(o => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic External Entity & Escalation Officer Routing dropdowns if status is set to Escalated */}
+              {newStatus === "Escalated" && (
+                <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/30 flex flex-col gap-4">
+                  <h4 className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-widest border-b border-red-500/20 pb-1 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    Required Escalation Routing
+                  </h4>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-foreground/60 uppercase tracking-widest">External Entity *</label>
+                    <select 
+                      required 
+                      value={tempExternalEntity} 
+                      onChange={e => {
+                        const entity = e.target.value;
+                        const defaultDept = ENTITY_DEPARTMENTS[entity]?.[0] || "";
+                        const defaultLiaison = ENTITY_LIAISONS[entity]?.[0] || "";
+                        const defaultEscalation = ENTITY_ESCALATION_OFFICERS[entity]?.[0] || "";
+                        setTempExternalEntity(entity);
+                        setTempEntityDepartment(defaultDept);
+                        setTempLiaisonOfficer(defaultLiaison);
+                        setTempEscalationOfficer(defaultEscalation);
+                      }} 
+                      className={`w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:border-gold ${!tempExternalEntity ? "border-red-300" : "border-border-warm"}`}
+                    >
+                      <option value="">Select Entity...</option>
+                      <option value="Sharjah Health Authority">Sharjah Health Authority</option>
+                      <option value="Sharjah Housing Directorate">Sharjah Housing Directorate</option>
+                      <option value="Ministry of Community Development">Ministry of Community Development</option>
+                      <option value="Sharjah Police General Directorate">Sharjah Police General Directorate</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-widest">Escalation Officer *</label>
+                    <select 
+                      required 
+                      value={tempEscalationOfficer || (ENTITY_ESCALATION_OFFICERS[tempExternalEntity]?.[0] || "")} 
+                      onChange={e => setTempEscalationOfficer(e.target.value)} 
+                      className="w-full px-3 py-2 rounded-xl border border-red-300 bg-background text-sm font-bold focus:outline-none focus:border-red-500 text-foreground"
+                      disabled={!tempExternalEntity}
+                    >
+                      {!tempExternalEntity ? (
+                        <option value="">Select Entity First...</option>
+                      ) : (
+                        <>
+                          <option value="">Select Escalation Officer...</option>
+                          {ENTITY_ESCALATION_OFFICERS[tempExternalEntity]?.map(o => (
                             <option key={o} value={o}>{o}</option>
                           ))}
                         </>

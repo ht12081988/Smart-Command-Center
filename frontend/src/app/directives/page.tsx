@@ -112,9 +112,59 @@ export const MOCK_DIRECTIVES: ExecutiveDirective[] = [
   }
 ];
 
+const DIRECTIVE_KANBAN_COLUMNS = [
+  {
+    id: "unlinked",
+    title: "No Case Linked",
+    status: "Active" as DirectiveStatus,
+    theme: {
+      bg: "bg-orange-500/[0.02] border-orange-500/15",
+      headerText: "text-orange-600 dark:text-orange-400",
+      badge: "bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold"
+    }
+  },
+  {
+    id: "Active",
+    title: "Active Directives",
+    status: "Active" as DirectiveStatus,
+    theme: {
+      bg: "bg-red-500/[0.02] border-red-500/15",
+      headerText: "text-red-600 dark:text-red-400",
+      badge: "bg-red-500/10 text-red-600 dark:text-red-400 animate-pulse"
+    }
+  },
+  {
+    id: "Closed",
+    title: "Closed (Verified)",
+    status: "Closed" as DirectiveStatus,
+    theme: {
+      bg: "bg-green-500/[0.02] border-green-500/15",
+      headerText: "text-green-600 dark:text-green-400",
+      badge: "bg-green-500/10 text-green-600 dark:text-green-400"
+    }
+  }
+];
+
 export default function ExecutiveDirectivesPage() {
   const { user } = useAuth();
   const [directives, setDirectives] = useState<ExecutiveDirective[]>(MOCK_DIRECTIVES);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, colId: string, targetStatus: DirectiveStatus) => {
+    e.preventDefault();
+    const directiveId = e.dataTransfer.getData("text/plain");
+    if (!directiveId) return;
+
+    if (colId === "unlinked") {
+      setDirectives(prev => prev.map(d => d.id === directiveId ? { ...d, linkedCaseId: "" } : d));
+    } else {
+      setDirectives(prev => prev.map(d => d.id === directiveId ? { ...d, status: targetStatus } : d));
+    }
+  };
   
   // Drawer & Modal States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -419,97 +469,260 @@ export default function ExecutiveDirectivesPage() {
           </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden flex flex-col">
-          <div className="px-6 py-4 border-b border-border-warm bg-foreground/[0.02]">
-            <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">Directive Master List</h2>
+        {/* Controls Bar: Section Title + View Mode Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">
+            Executive Directives Workspace
+          </h2>
+
+          <div className="flex items-center gap-1 bg-card border border-border-warm rounded-xl p-1 shrink-0 shadow-2xs">
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 01-2-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+              </svg>
+              Kanban Board
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              List View
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-foreground/[0.02] text-xs uppercase tracking-wider font-bold text-foreground/50">
-                <tr>
-                  <th className="px-6 py-4 border-b border-border-warm">ID & Date</th>
-                  <th className="px-6 py-4 border-b border-border-warm">Citizen</th>
-                  <th className="px-6 py-4 border-b border-border-warm">Authorizing Leader</th>
-                  <th className="px-6 py-4 border-b border-border-warm">Target Entity</th>
-                  <th className="px-6 py-4 border-b border-border-warm text-center">Status & Priority</th>
-                  <th className="px-6 py-4 border-b border-border-warm text-center">SLA Deadline</th>
-                  <th className="px-6 py-4 border-b border-border-warm text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-warm">
-                {paginatedDirectives.map(d => (
-                  <tr key={d.id} className="hover:bg-foreground/[0.01] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-foreground">{d.id}</div>
-                      <div className="text-[10px] text-foreground/50 uppercase tracking-widest">{new Date(d.createdAt).toLocaleDateString()} &bull; <span className="text-gold">{d.linkedCaseId || "UNLINKED"}</span></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-foreground">{d.citizenName}</div>
-                      <div className="text-[10px] text-foreground/40 font-mono">{d.citizenId}</div>
-                    </td>
-                    <td className="px-6 py-4 font-medium">{d.authorizingLeader}</td>
-                    <td className="px-6 py-4">
-                      <div className="text-foreground/80 font-medium">{d.targetEntity}</div>
-                      {d.targetDepartment && <div className="text-[10px] text-foreground/50 uppercase">{d.targetDepartment}</div>}
-                      {d.targetOfficer && <div className="text-[10px] font-bold text-gold/80">{d.targetOfficer}</div>}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                          d.status === "Active" ? "bg-red-50 text-red-700 border border-red-200" :
-                          d.status === "Pending Verification" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                          "bg-green-50 text-green-700 border border-green-200"
-                        }`}>
-                          {d.status}
-                        </span>
-                        <span className="text-[10px] font-bold text-foreground/50 uppercase">{d.priority} Priority</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xs font-mono font-medium text-foreground/70">{new Date(d.deadline).toLocaleString()}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {d.linkedCaseId ? (
-                          <button onClick={() => handleViewCase(d.linkedCaseId)} className="bg-background border border-border-warm hover:border-gold text-foreground hover:text-gold px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap">
-                            View Case
-                          </button>
-                        ) : (
-                          <button onClick={() => openCreateCaseDrawerForDirective(d.id)} className="bg-gold hover:bg-gold-light text-black px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap">
-                            Create Case
-                          </button>
-                        )}
-                        {d.status !== "Closed" && (
-                          <button onClick={() => openClosureModal(d.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[10px] uppercase font-bold tracking-wider rounded-lg transition-colors whitespace-nowrap">
-                            Verify & Close
-                          </button>
-                        )}
-                        <button onClick={() => openDrawer(d)} className="p-1.5 text-foreground/40 hover:text-gold transition-colors" title="Edit">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                        </button>
-                        <button onClick={() => handleDelete(d.id)} className="p-1.5 text-foreground/40 hover:text-red-500 transition-colors" title="Delete">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={directives.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setCurrentPage(1);
-            }}
-          />
         </div>
+
+        {/* Main View: Kanban Board vs. List Data Table */}
+        {viewMode === "kanban" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+            {DIRECTIVE_KANBAN_COLUMNS.map(col => {
+              const colDirectives = col.id === "unlinked"
+                ? directives.filter(d => !d.linkedCaseId)
+                : col.id === "Active"
+                ? directives.filter(d => d.linkedCaseId && d.status !== "Closed")
+                : directives.filter(d => d.status === "Closed");
+              return (
+                <div 
+                  key={col.id}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, col.id, col.status)}
+                  className={`p-4 rounded-2xl border flex flex-col gap-3 min-h-[460px] ${col.theme.bg}`}
+                >
+                  <div className="flex justify-between items-center border-b border-border-warm pb-2 shrink-0">
+                    <span className={`font-bold text-xs uppercase tracking-wider flex items-center gap-2 ${col.theme.headerText}`}>
+                      {col.title}
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${col.theme.badge}`}>
+                        {colDirectives.length}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-3 custom-kanban-scrollbar pr-1">
+                    {colDirectives.length === 0 ? (
+                      <div className="text-center py-16 text-foreground/30 text-[10px] font-bold uppercase tracking-wider border border-dashed border-border-warm/40 rounded-xl">
+                        No Directives
+                      </div>
+                    ) : (
+                      colDirectives.map(d => (
+                        <div 
+                          key={d.id}
+                          draggable
+                          onDragStart={(e) => e.dataTransfer.setData("text/plain", d.id)}
+                          className="bg-card border border-border-warm rounded-xl p-4 transition-all flex flex-col gap-2.5 shadow-2xs hover:border-gold/50 hover:shadow-md cursor-grab active:cursor-grabbing group relative"
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <span className="font-bold text-xs text-primary-text-gold block mb-0.5">{d.id}</span>
+                              <span className="text-[9px] text-foreground/50 uppercase tracking-widest font-bold">
+                                {new Date(d.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider ${
+                              d.priority === "Critical" ? "bg-red-600 text-white border border-red-700 animate-pulse" : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                            }`}>
+                              {d.priority} Priority
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-foreground/90 font-medium leading-relaxed bg-background/50 p-2.5 rounded-lg border border-border-warm/40 italic flex flex-col gap-1">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 not-italic flex items-center gap-1">
+                              👑 Verbal Directive Statement
+                            </span>
+                            "{d.description}"
+                          </div>
+
+                          <div className="border-t border-border-warm/40 pt-2 flex flex-col gap-1 text-[10px]">
+                            <div className="flex justify-between items-center">
+                              <span className="text-foreground/45 font-semibold">Authorizing Leader:</span>
+                              <span className="font-bold text-foreground/85">{d.authorizingLeader}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-foreground/45 font-semibold">Citizen:</span>
+                              <span className="font-bold text-foreground/85">{d.citizenName} {d.citizenId !== "N/A" && `(${d.citizenId})`}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-foreground/45 font-semibold">Target Entity:</span>
+                              <span className="font-bold text-gold/90 truncate max-w-[140px]">{d.targetEntity}</span>
+                            </div>
+                            {d.targetDepartment && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-foreground/45 font-semibold">Department:</span>
+                                <span className="font-bold text-foreground/75">{d.targetDepartment}</span>
+                              </div>
+                            )}
+                            {d.targetOfficer && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-foreground/45 font-semibold">Liaison Officer:</span>
+                                <span className="font-bold text-gold/80">{d.targetOfficer}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center mt-1">
+                              <span className="text-foreground/45 font-semibold">SLA Deadline:</span>
+                              <span className="font-mono text-[9.5px] font-bold text-red-500">{new Date(d.deadline).toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t border-border-warm/40 pt-2 mt-0.5">
+                            <div className="flex items-center gap-1.5">
+                              {d.linkedCaseId ? (
+                                <button onClick={() => handleViewCase(d.linkedCaseId)} className="bg-gold-muted/40 border border-gold/40 hover:border-gold text-primary-text-gold px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1 font-mono">
+                                  <span>🔗 Case: {d.linkedCaseId}</span>
+                                </button>
+                              ) : (
+                                <button onClick={() => openCreateCaseDrawerForDirective(d.id)} className="bg-gold hover:bg-gold-hover text-white px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer">
+                                  + Create Case
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {d.status !== "Closed" && (
+                                <button onClick={() => openClosureModal(d.id)} className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white text-[9px] uppercase font-bold tracking-wider rounded-lg transition-colors shadow-2xs cursor-pointer">
+                                  Verify & Close
+                                </button>
+                              )}
+                              <button onClick={() => openDrawer(d)} className="p-1 text-foreground/40 hover:text-gold transition-colors cursor-pointer" title="Edit">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                              <button onClick={() => handleDelete(d.id)} className="p-1 text-foreground/40 hover:text-red-500 transition-colors cursor-pointer" title="Delete">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Data Table */
+          <div className="bg-background rounded-2xl border border-border-warm shadow-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-border-warm bg-foreground/[0.02]">
+              <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-widest">Directive Master List</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-foreground/[0.02] text-xs uppercase tracking-wider font-bold text-foreground/50">
+                  <tr>
+                    <th className="px-6 py-4 border-b border-border-warm">ID & Date</th>
+                    <th className="px-6 py-4 border-b border-border-warm">Citizen</th>
+                    <th className="px-6 py-4 border-b border-border-warm">Authorizing Leader</th>
+                    <th className="px-6 py-4 border-b border-border-warm">Target Entity</th>
+                    <th className="px-6 py-4 border-b border-border-warm text-center">Status & Priority</th>
+                    <th className="px-6 py-4 border-b border-border-warm text-center">SLA Deadline</th>
+                    <th className="px-6 py-4 border-b border-border-warm text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-warm">
+                  {paginatedDirectives.map(d => (
+                    <tr key={d.id} className="hover:bg-foreground/[0.01] transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-foreground">{d.id}</div>
+                        <div className="text-[10px] text-foreground/50 uppercase tracking-widest">{new Date(d.createdAt).toLocaleDateString()} &bull; <span className="text-gold">{d.linkedCaseId || "UNLINKED"}</span></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-foreground">{d.citizenName}</div>
+                        <div className="text-[10px] text-foreground/40 font-mono">{d.citizenId}</div>
+                      </td>
+                      <td className="px-6 py-4 font-medium">{d.authorizingLeader}</td>
+                      <td className="px-6 py-4">
+                        <div className="text-foreground/80 font-medium">{d.targetEntity}</div>
+                        {d.targetDepartment && <div className="text-[10px] text-foreground/50 uppercase">{d.targetDepartment}</div>}
+                        {d.targetOfficer && <div className="text-[10px] font-bold text-gold/80">{d.targetOfficer}</div>}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                            d.status === "Active" ? "bg-red-50 text-red-700 border border-red-200" :
+                            d.status === "Pending Verification" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                            "bg-green-50 text-green-700 border border-green-200"
+                          }`}>
+                            {d.status}
+                          </span>
+                          <span className="text-[10px] font-bold text-foreground/50 uppercase">{d.priority} Priority</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-xs font-mono font-medium text-foreground/70">{new Date(d.deadline).toLocaleString()}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {d.linkedCaseId ? (
+                            <button onClick={() => handleViewCase(d.linkedCaseId)} className="bg-background border border-border-warm hover:border-gold text-foreground hover:text-gold px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap">
+                              View Case
+                            </button>
+                          ) : (
+                            <button onClick={() => openCreateCaseDrawerForDirective(d.id)} className="bg-gold hover:bg-gold-light text-black px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap">
+                              Create Case
+                            </button>
+                          )}
+                          {d.status !== "Closed" && (
+                            <button onClick={() => openClosureModal(d.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[10px] uppercase font-bold tracking-wider rounded-lg transition-colors whitespace-nowrap">
+                              Verify & Close
+                            </button>
+                          )}
+                          <button onClick={() => openDrawer(d)} className="p-1.5 text-foreground/40 hover:text-gold transition-colors" title="Edit">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                          <button onClick={() => handleDelete(d.id)} className="p-1.5 text-foreground/40 hover:text-red-500 transition-colors" title="Delete">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={directives.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        )}
       </main>
 
       {/* Screen 5.1: Intake & Logging Drawer */}
