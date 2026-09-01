@@ -20,6 +20,35 @@ const COMPLIANCE_PROFILES = [
   "General Public Feedback Auditing"
 ];
 
+function formatScheduleDisplay(isoStr: string) {
+  if (!isoStr) return { dateStr: "Today", timeStr: "03:30 PM" };
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return { dateStr: "Today", timeStr: isoStr };
+    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    const timeStr = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    return { dateStr, timeStr };
+  } catch {
+    return { dateStr: "Today", timeStr: isoStr };
+  }
+}
+
+function isScheduledForToday(isoStr: string) {
+  if (!isoStr) return true;
+  try {
+    const targetDate = new Date(isoStr);
+    if (isNaN(targetDate.getTime())) return true;
+    const now = new Date();
+    return (
+      targetDate.getFullYear() === now.getFullYear() &&
+      targetDate.getMonth() === now.getMonth() &&
+      targetDate.getDate() === now.getDate()
+    );
+  } catch {
+    return true;
+  }
+}
+
 function ProducerStudioPageContent() {
   const {
     activeSource,
@@ -34,6 +63,7 @@ function ProducerStudioPageContent() {
     goOnAir,
     goOnAirStream,
     endCall,
+    disconnectCaller,
     isLive,
     transcriptLines,
     ytComments,
@@ -51,6 +81,7 @@ function ProducerStudioPageContent() {
   const [isTelemetryDrawerOpen, setIsTelemetryDrawerOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState("");
+  const [openedFromCatalog, setOpenedFromCatalog] = useState(false);
   
   // Right Panel Tabs Split (Upper & Lower sections)
   const [upperPanelTab, setUpperPanelTab] = useState<"transcript" | "directives" | "chat" | "queue" | "telemetry">("transcript");
@@ -115,6 +146,16 @@ function ProducerStudioPageContent() {
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [editableTranscripts]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isLive) {
+        handleDisconnectClick();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLive]);
 
   // Ingest Config Form States
   const [tempSource, setTempSource] = useState<BroadcastSource>("YouTubeLive");
@@ -245,13 +286,7 @@ function ProducerStudioPageContent() {
     setFeedTitle(ingestChannel);
     switchSource(tempSource);
     setUpperPanelTab("transcript");
-    if (tempSource !== "HotLine") {
-      // Stream sources trigger automatic transcription feed
-      // Wrap in small timeout to ensure switchSource completes context state update
-      setTimeout(() => {
-        goOnAirStream();
-      }, 50);
-    }
+    // Scheduled feed saved. User remains on catalog listing page.
   };
 
   const handleGenerateDraftClick = () => {
@@ -283,8 +318,16 @@ function ProducerStudioPageContent() {
 
   const handleDisconnectClick = () => {
     const confirmMsg = activeCaller 
-      ? `Are you sure you want to disconnect caller ${activeCaller.fullName} from the live broadcast?` 
-      : "Are you sure you want to disconnect the active ingest feed?";
+      ? `Are you sure you want to disconnect caller ${activeCaller.fullName} from the live broadcast and return to the previous page?` 
+      : "Are you sure you want to disconnect the active ingest feed and return to the previous page?";
+    setConfirmModalMessage(confirmMsg);
+    setShowConfirmModal(true);
+  };
+
+  const handleCloseOverlayClick = () => {
+    const confirmMsg = activeCaller
+      ? `Are you sure you want to close the studio control desk and disconnect caller ${activeCaller.fullName}?`
+      : "Are you sure you want to close the studio control desk and disconnect the active feed?";
     setConfirmModalMessage(confirmMsg);
     setShowConfirmModal(true);
   };
@@ -317,75 +360,6 @@ function ProducerStudioPageContent() {
           }
           actions={
             <div className="flex items-center gap-3 justify-end whitespace-nowrap">
-              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
-                !isLive ? "bg-foreground/5 text-foreground/40 border border-border-warm" :
-                activeSource === "HotLine" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                activeSource === "YouTubeLive" ? "bg-red-50 text-red-700 border border-red-200" :
-                "bg-blue-50 text-blue-700 border border-blue-200"
-              }`}>
-                {!isLive && "○ System Standby (Offline)"}
-                {isLive && activeSource === "HotLine" && `📞 Feed: ${feedTitle || ingestChannel || "Active Hotline"}`}
-                {isLive && activeSource === "YouTubeLive" && `🔴 Feed: ${feedTitle || ingestChannel || "Sharjah TV Live Stream Feed"}`}
-                {isLive && activeSource === "LiveTV" && `📺 Feed: ${feedTitle || ingestChannel || "Television Matrix"}`}
-                {isLive && activeSource === "RadioAoIP" && `📻 Feed: ${feedTitle || ingestChannel || "Radio AoIP Stream"}`}
-              </span>
-
-              {isLive && activeSource !== "YouTubeLive" && (
-                <div className="hidden xl:flex items-center gap-4 bg-background border border-border-warm rounded-xl px-3 py-1.5 shadow-2xs">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Presenter Mic</span>
-                      <div className="flex items-center gap-0.5">
-                        {[...Array(12)].map((_, i) => {
-                          const limit = -60 + (i * 5);
-                          const active = presenterDb >= limit;
-                          const isHot = limit > -10;
-                          return (
-                            <span
-                              key={i}
-                              className={`w-1 h-2 rounded-xs transition-colors duration-75 ${
-                                !active ? "bg-foreground/5" : isHot ? "bg-red-500" : "bg-emerald-500"
-                              }`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[8px] font-bold text-foreground/45 uppercase tracking-widest">Citizen Line</span>
-                      <div className="flex items-center gap-0.5">
-                        {[...Array(12)].map((_, i) => {
-                          const limit = -60 + (i * 5);
-                          const active = ingestDb >= limit;
-                          const isHot = limit > -10;
-                          return (
-                            <span
-                              key={i}
-                              className={`w-1 h-2 rounded-xs transition-colors duration-75 ${
-                                !active ? "bg-foreground/5" : isHot ? "bg-red-500" : "bg-emerald-500"
-                              }`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                </div>
-              )}
-
-              {/* Telemetry Icon Button */}
-              <button
-                onClick={() => setIsTelemetryDrawerOpen(true)}
-                className="flex items-center justify-center w-9 h-9 bg-card hover:bg-gold-muted/40 border border-border-warm hover:border-gold rounded-xl transition-colors shadow-2xs cursor-pointer"
-                title="View Telemetry & Signal Lock"
-              >
-                <div className="relative flex items-center justify-center">
-                  <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full border border-card ${isLive ? "bg-green-500 animate-pulse" : "bg-foreground/30"}`} />
-                </div>
-              </button>
-
               {!isLive ? (
                 <button
                   onClick={handleOpenConfigClick}
@@ -396,7 +370,7 @@ function ProducerStudioPageContent() {
               ) : (
                 <button
                   onClick={handleDisconnectClick}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap cursor-pointer"
+                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Disconnect Feed
                 </button>
@@ -404,41 +378,323 @@ function ProducerStudioPageContent() {
             </div>
           }
         />
-        {!isLive ? (
-          <main className="flex-1 p-6 flex flex-col items-center justify-center bg-background/50">
-            <div className="max-w-lg w-full bg-card border border-border-warm rounded-3xl p-10 flex flex-col items-center text-center shadow-md animate-in fade-in zoom-in duration-300">
-              <div className="w-20 h-20 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold mb-6 shadow-xs">
-                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-8 bg-background/50">
+          {/* SECTION 1: LIVE NOW & ACTIVE FEEDS */}
+          <div>
+            <div className="flex items-center justify-between mb-4 border-b border-border-warm pb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-widest">
+                  🔴 Live Now & Active Feeds
+                </h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {/* CARD 1: Scheduled Live Feed (Rendered when scheduled for Today) */}
+              {isScheduledForToday(scheduleDateTime) && (
+                <div className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+                  <div>
+                    <div className="relative h-44 bg-black flex items-center justify-center border-b border-border-warm">
+                      <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
+                        <span className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                          <svg className="w-6 h-6 fill-current pl-1" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </div>
+                      <span className="absolute top-4 left-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm z-10 bg-red-600 text-white border border-red-700">
+                        {activeSource === "LiveTV" ? "Live TV Feed" : activeSource === "RadioAoIP" ? "Radio AoIP Stream" : "YouTube Live Feed"}
+                      </span>
+                      <span className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-xs text-gold border border-gold/40 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 z-10">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {formatScheduleDisplay(scheduleDateTime).timeStr}
+                      </span>
+                    </div>
+
+                    <div className="p-5 flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
+                        <span>Today</span>
+                        <span className="text-red-500 font-bold">Live Feed Active</span>
+                      </div>
+                      <h4 className="font-bold text-primary-text-gold text-sm group-hover:text-gold transition-colors line-clamp-2 uppercase tracking-tight">
+                        {feedTitle || "Sharjah TV Live Stream Feed"}
+                      </h4>
+                      <div className="bg-gold-muted/40 border border-gold/25 p-2 rounded-xl flex items-center justify-between text-[9.5px] font-bold text-primary-text-gold mt-1">
+                        <span className="uppercase tracking-widest text-foreground/60">Scheduled Feed Time</span>
+                        <span className="font-mono text-gold">{formatScheduleDisplay(scheduleDateTime).dateStr} @ {formatScheduleDisplay(scheduleDateTime).timeStr}</span>
+                      </div>
+                      <ul className="mt-1 space-y-1 text-xs text-foreground/70">
+                        <li className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="text-gold">•</span>
+                          <span>Active broadcast feed with real-time STT speech transcription.</span>
+                        </li>
+                        <li className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="text-gold">•</span>
+                          <span>Listening for Ruler executive directives and immediate citizen complaints.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="p-5 pt-0">
+                    <button
+                      onClick={() => {
+                        setOpenedFromCatalog(true);
+                        switchSource(activeSource === "HotLine" ? "YouTubeLive" : activeSource);
+                        goOnAirStream();
+                      }}
+                      className="w-full text-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-xs transition-all bg-gold hover:bg-gold-hover text-white flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      🔌 View Feed
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* CARD 2: Active Hotline Queue Desk */}
+              <div className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+                <div>
+                  <div className="relative h-44 bg-black flex items-center justify-center border-b border-border-warm">
+                    <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
+                      <span className="w-12 h-12 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </span>
+                    </div>
+                    <span className="absolute top-4 left-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm z-10 bg-indigo-600 text-white border border-indigo-700">
+                      Direct Hotline Desk
+                    </span>
+                  </div>
+
+                  <div className="p-5 flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
+                      <span>Today</span>
+                      <span className="text-amber-500 font-bold">Queue Open ({callerQueue.length} Waiting)</span>
+                    </div>
+                    <h4 className="font-bold text-primary-text-gold text-sm group-hover:text-gold transition-colors line-clamp-2 uppercase tracking-tight">
+                      Sharjah Telephony Hotline Trunk
+                    </h4>
+                    <ul className="mt-2 space-y-1 text-xs text-foreground/70">
+                      <li className="flex items-start gap-1.5 leading-relaxed">
+                        <span className="text-gold">•</span>
+                        <span>Direct telephone line for citizen public grievances.</span>
+                      </li>
+                      <li className="flex items-start gap-1.5 leading-relaxed">
+                        <span className="text-gold">•</span>
+                        <span>Screen caller queue, manage notes, and auto-draft emergency cases.</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="p-5 pt-0">
+                  <button
+                    onClick={() => {
+                      setOpenedFromCatalog(true);
+                      switchSource("HotLine");
+                      setTimeout(() => {
+                        if (callerQueue.length > 0) {
+                          goOnAir(callerQueue[0]);
+                        } else {
+                          goOnAirStream();
+                        }
+                      }, 50);
+                    }}
+                    className="w-full text-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-xs transition-all bg-foreground text-background hover:bg-gold hover:text-white flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    📞 Screen Active Hotline Queue
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: UPCOMING SCHEDULED STREAMS */}
+          <div>
+            <div className="flex items-center gap-2 mb-4 border-b border-border-warm pb-2">
+              <h3 className="text-xs font-bold text-foreground/60 uppercase tracking-widest">
+                📅 Upcoming Scheduled Broadcasts
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {/* User's Scheduled Feed (Rendered here when date is NOT Today) */}
+              {!isScheduledForToday(scheduleDateTime) && (
+                <div className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold transition-all duration-200 flex flex-col justify-between group">
+                  <div>
+                    <div className="relative h-44 bg-black flex items-center justify-center border-b border-border-warm">
+                      <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 bg-gradient-to-t from-black/80 to-transparent">
+                        <span className="w-12 h-12 rounded-full bg-gold/20 border border-gold/40 text-gold flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                          <svg className="w-6 h-6 fill-current pl-1" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </div>
+                      <span className="absolute top-4 left-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm z-10 bg-gold text-white">
+                        Upcoming Scheduled Feed
+                      </span>
+                      <span className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-xs text-gold border border-gold/40 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 z-10">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {formatScheduleDisplay(scheduleDateTime).timeStr}
+                      </span>
+                    </div>
+
+                    <div className="p-5 flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
+                        <span>{formatScheduleDisplay(scheduleDateTime).dateStr}</span>
+                        <span className="text-gold font-bold">{formatScheduleDisplay(scheduleDateTime).timeStr}</span>
+                      </div>
+                      <h4 className="font-bold text-primary-text-gold text-sm group-hover:text-gold transition-colors line-clamp-2 uppercase tracking-tight">
+                        {feedTitle || "Sharjah Scheduled Broadcast Feed"}
+                      </h4>
+                      <p className="text-xs text-foreground/60 mt-1">
+                        Scheduled broadcast feed for {formatScheduleDisplay(scheduleDateTime).dateStr} @ {formatScheduleDisplay(scheduleDateTime).timeStr}.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-5 pt-0">
+                    <button
+                      onClick={() => {
+                        setOpenedFromCatalog(true);
+                        switchSource("YouTubeLive");
+                        goOnAirStream();
+                      }}
+                      className="w-full text-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-xs transition-all bg-gold hover:bg-gold-hover text-white flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      🔌 View Feed (Simulation)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold/30 transition-all duration-200 flex flex-col justify-between group opacity-85">
+                <div>
+                  <div className="relative h-44 bg-black/90 flex items-center justify-center border-b border-border-warm">
+                    <span className="w-12 h-12 rounded-full bg-foreground/10 text-foreground/40 flex items-center justify-center shadow-md">
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="p-5 flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
+                      <span>Sept 02, 2026</span>
+                      <span className="text-foreground/50 font-bold">10:00 AM</span>
+                    </div>
+                    <h4 className="font-bold text-foreground/80 text-sm line-clamp-2 uppercase tracking-tight">
+                      Sharjah TV Special Assembly Feed
+                    </h4>
+                    <p className="text-xs text-foreground/60 mt-1">Scheduled TV broadcast coverage for Executive Council session monitoring.</p>
+                  </div>
+                </div>
+                <div className="p-5 pt-0">
+                  <div className="w-full text-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-foreground/5 text-foreground/40 border border-border-warm">
+                    📅 Scheduled Broadcast
+                  </div>
+                </div>
               </div>
 
-              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/50 bg-foreground/5 px-3.5 py-1 rounded-full border border-border-warm mb-3.5 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-foreground/30" />
-                System Standby (Offline)
-              </span>
-
-              <h2 className="text-xl font-black text-foreground uppercase tracking-tight mb-2">
-                No Live Feed Connected
-              </h2>
-
-              <p className="text-xs text-foreground/60 leading-relaxed mb-6 max-w-sm">
-                No active broadcast or hotline feed is currently ingested. Schedule a feed to enable real-time STT transcription, caller queue management, and AI directive extraction.
-              </p>
-
-              <button
-                onClick={handleOpenConfigClick}
-                className="bg-gold hover:bg-gold-hover text-white px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md transition-all flex items-center gap-2 hover:scale-[1.02] cursor-pointer"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Schedule a Feed
-              </button>
+              <div className="bg-card border border-border-warm rounded-2xl overflow-hidden shadow-xs hover:border-gold/30 transition-all duration-200 flex flex-col justify-between group opacity-85">
+                <div>
+                  <div className="relative h-44 bg-black/90 flex items-center justify-center border-b border-border-warm">
+                    <span className="w-12 h-12 rounded-full bg-foreground/10 text-foreground/40 flex items-center justify-center shadow-md">
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="p-5 flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-[10px] text-foreground/45 uppercase tracking-wider font-bold">
+                      <span>Sept 03, 2026</span>
+                      <span className="text-foreground/50 font-bold">08:30 AM</span>
+                    </div>
+                    <h4 className="font-bold text-foreground/80 text-sm line-clamp-2 uppercase tracking-tight">
+                      Sharjah Radio Morning Sub-Mix Feed
+                    </h4>
+                    <p className="text-xs text-foreground/60 mt-1">Scheduled AoIP studio sub-mix stream for morning public feedback.</p>
+                  </div>
+                </div>
+                <div className="p-5 pt-0">
+                  <div className="w-full text-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-foreground/5 text-foreground/40 border border-border-warm">
+                    📅 Scheduled Broadcast
+                  </div>
+                </div>
+              </div>
             </div>
-          </main>
-        ) : (
-          <main className="flex-1 p-2 md:p-3 flex flex-col gap-3 overflow-hidden max-h-screen">
+          </div>
+        </main>
+
+        {/* FULLSCREEN STUDIO CONTROL DESK OVERLAY (Rendered when isLive is true) */}
+        {isLive && (
+          <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+            {/* Overlay Header Bar */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border-warm bg-card shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/30 flex items-center justify-center text-red-600 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-foreground uppercase tracking-tight">
+                      {feedTitle || "Sharjah TV Live Stream Feed"}
+                    </h2>
+                    <span className="bg-red-50 text-red-700 border border-red-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      LIVE CONTROL DESK
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-foreground/50 uppercase tracking-wider">
+                    Real-time STT Speech Transcripts, AI Directives & Screener Queue
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* STT Accuracy */}
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-gold-muted border border-gold/15 rounded-lg text-xs font-semibold">
+                  <span className="text-foreground/50 uppercase text-[9px] font-bold">STT Accuracy:</span>
+                  <span className="text-primary-text-gold font-bold">{sttConfidence}%</span>
+                </div>
+
+                {/* Telemetry Icon Button */}
+                <button
+                  onClick={() => setIsTelemetryDrawerOpen(true)}
+                  className="flex items-center justify-center w-8 h-8 bg-background hover:bg-gold-muted/40 border border-border-warm hover:border-gold rounded-lg transition-colors shadow-2xs cursor-pointer"
+                  title="View Telemetry & Signal Lock"
+                >
+                  <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </button>
+
+                {/* Disconnect Feed Button */}
+                <button
+                  onClick={handleDisconnectClick}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  Disconnect Feed
+                </button>
+
+                {/* Close X Button (Triggers confirmation prompt) */}
+                <button
+                  onClick={handleCloseOverlayClick}
+                  className="w-8 h-8 rounded-xl bg-card hover:bg-red-50 text-foreground/50 hover:text-red-600 border border-border-warm hover:border-red-200 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Close Page"
+                >
+                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <main className="flex-1 p-2 md:p-3 flex flex-col gap-3 overflow-hidden max-h-screen">
             <style>{`
               .custom-kanban-scrollbar::-webkit-scrollbar {
                 width: 5px;
@@ -480,7 +736,7 @@ function ProducerStudioPageContent() {
                 </div>
 
                 {/* Currently Active / On-Air Caller Card (if any) */}
-                {activeCaller && (
+                {activeCaller ? (
                   <div className="bg-gradient-to-r from-amber-500/10 via-gold-muted/30 to-background border border-gold/40 rounded-xl p-3 flex flex-col gap-1.5 shrink-0 shadow-sm">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -500,19 +756,21 @@ function ProducerStudioPageContent() {
 
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={handleGenerateDraftClick}
-                          className="bg-gold hover:bg-gold-hover text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
-                        >
-                          + Log Case
-                        </button>
-                        <button
-                          onClick={handleDisconnectClick}
+                          onClick={() => disconnectCaller()}
                           className="bg-red-600 hover:bg-red-700 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
                         >
                           Disconnect
                         </button>
                       </div>
                     </div>
+                  </div>
+                ) : (
+                  <div className="bg-background border border-dashed border-border-warm rounded-xl p-3 flex items-center justify-between text-foreground/50 shrink-0 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-foreground/30" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/60">No Active On-Air Caller</span>
+                    </div>
+                    <span className="text-[9.5px] text-gold font-bold uppercase tracking-wider">Select caller below to Patch Air</span>
                   </div>
                 )}
 
@@ -985,7 +1243,8 @@ function ProducerStudioPageContent() {
           </div>
         </div>
       </main>
-    )}
+    </div>
+  )}
 
       {/* 3. Ingestion Config Setup Drawer (Slides right to left) */}
       {isConfigDrawerOpen && (
@@ -1247,11 +1506,19 @@ function ProducerStudioPageContent() {
                 onClick={() => {
                   setShowConfirmModal(false);
                   endCall();
-                  router.push('/executive/ingestion');
+                  if (openedFromCatalog) {
+                    setOpenedFromCatalog(false);
+                  } else {
+                    if (window.history.length > 1) {
+                      router.back();
+                    } else {
+                      router.push('/executive/ingestion');
+                    }
+                  }
                 }}
                 className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-[10px] uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
               >
-                Disconnect
+                Yes, Disconnect & Exit
               </button>
             </div>
           </div>

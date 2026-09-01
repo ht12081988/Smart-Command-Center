@@ -65,6 +65,7 @@ interface BroadcastContextType {
   goOnAir: (ticket: ScreenerTicket) => void;
   goOnAirStream: () => void;
   endCall: () => void;
+  disconnectCaller: () => void;
   isLive: boolean;
   transcriptLines: TranscriptLine[];
   aiPrompts: AIPromptCard[];
@@ -97,7 +98,11 @@ const MOCK_HOTLINE_TRANSCRIPT = [
   { 
     speaker: "Caller", 
     text: "I submitted the application to the Sharjah Housing Department in January 2025. It is still under review.",
-    textAr: "قدمت الطلب إلى دائرة الإسكان في الشارقة في يناير ٢٠٢٥. ولا يزال قيد المراجعة."
+    textAr: "قدمت الطلب إلى دائرة الإسكان في الشارقة في يناير ٢٠٢٥. ولا يزال قيد المراجعة.",
+    detectionType: "suggested_case" as const,
+    citizenName: "Abdullah Al-Mansoori",
+    category: "Housing Allocation",
+    entity: "Sharjah Housing Department"
   },
   { 
     speaker: "Host", 
@@ -107,7 +112,11 @@ const MOCK_HOTLINE_TRANSCRIPT = [
   { 
     speaker: "Caller", 
     text: "Yes, it is SHJ-HSG-9841. My family is currently living in a rented apartment, and the rent is increasing.",
-    textAr: "نعم، هو SHJ-HSG-9841. عائلتي تعيش حالياً في شقة مستأجرة، والإيجار يرتفع."
+    textAr: "نعم، هو SHJ-HSG-9841. عائلتي تعيش حالياً في شقة مستأجرة، والإيجار يرتفع.",
+    detectionType: "directive" as const,
+    citizenName: "Abdullah Al-Mansoori",
+    category: "Housing Allocation",
+    entity: "Sharjah Housing Directorate"
   },
   { 
     speaker: "Host", 
@@ -241,6 +250,17 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsLive(true);
     setSttConfidence(94);
     setPriorCaseMatch("Case #CASE-9410 (Resolved - Housing Delay, 2024)");
+    setExtractedDirectives([
+      {
+        id: "item-hotline-case-1",
+        type: "suggested_case",
+        text: "Housing grant application SHJ-HSG-9841 pending review since Jan 2025.",
+        category: "Housing Allocation",
+        entity: "Sharjah Housing Department",
+        citizenName: ticket.fullName || "Abdullah Al-Mansoori",
+        priority: "Standard"
+      }
+    ]);
     setEntityChecklist([
       { name: "Caller Identity", status: "extracted" },
       { name: "Region / Area", status: "extracted" },
@@ -263,7 +283,11 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             speaker: speakerLabel,
             text: line.text,
             textAr: line.textAr,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            detectionType: line.detectionType,
+            citizenName: line.citizenName || ticket.fullName,
+            category: line.category,
+            entity: line.entity
           }
         ]);
 
@@ -443,6 +467,19 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const disconnectCaller = () => {
+    if (activeCaller) {
+      setCallerQueue((prev) => {
+        const exists = prev.some((c) => c.id === activeCaller.id);
+        if (!exists) {
+          return [activeCaller, ...prev];
+        }
+        return prev;
+      });
+      setActiveCaller(null);
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -466,6 +503,7 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         goOnAir,
         goOnAirStream,
         endCall,
+        disconnectCaller,
         isLive,
         transcriptLines,
         aiPrompts,
