@@ -721,7 +721,7 @@ function ProducerStudioPageContent() {
             {/* TOP SECTION: YouTube Player OR Hotline Caller Queue */}
             {activeSource === "HotLine" ? (
               /* HOTLINE MODE: Caller Queue Panel */
-              <div className="h-[52%] bg-card border border-border-warm rounded-2xl p-4 flex flex-col gap-3 overflow-hidden shadow-2xs shrink-0">
+              <div className="h-[68%] max-h-[460px] bg-card border border-border-warm rounded-2xl p-4 flex flex-col gap-3 overflow-hidden shadow-2xs shrink-0">
                 {/* Header */}
                 <div className="flex justify-between items-center border-b border-border-warm pb-2 shrink-0">
                   <div className="flex items-center gap-2">
@@ -820,7 +820,7 @@ function ProducerStudioPageContent() {
                 </div>
               </div>
             ) : isLive && activeSource === "YouTubeLive" ? (
-              <div className="w-full aspect-video rounded-2xl overflow-hidden border border-border-warm bg-black shadow-md shrink-0">
+              <div className="w-full h-[68%] max-h-[460px] rounded-2xl overflow-hidden border border-border-warm bg-black shadow-md shrink-0">
                 <iframe 
                   className="w-full h-full" 
                   src="https://www.youtube.com/embed/wWYK6IVszPk?autoplay=0&mute=1" 
@@ -831,7 +831,7 @@ function ProducerStudioPageContent() {
                 ></iframe>
               </div>
             ) : (
-              <div className="w-full aspect-video rounded-2xl border border-border-warm bg-card flex flex-col justify-center items-center text-center p-8 shrink-0 shadow-xs">
+              <div className="w-full h-[68%] max-h-[460px] rounded-2xl border border-border-warm bg-card flex flex-col justify-center items-center text-center p-8 shrink-0 shadow-xs">
                 <div className="w-14 h-14 rounded-full bg-gold-muted border border-gold/20 flex items-center justify-center text-gold font-bold text-xl mb-3">
                   📻
                 </div>
@@ -843,7 +843,7 @@ function ProducerStudioPageContent() {
             )}
 
             {/* LOWER LEFT SECTION: Auxiliary Producer Tools - AI Suggestions & Notes */}
-            <section className="flex-1 bg-card border border-border-warm rounded-2xl p-4 flex flex-col overflow-hidden shadow-2xs min-h-0">
+            <section className="flex-1 max-h-[220px] bg-card border border-border-warm rounded-2xl p-4 flex flex-col overflow-hidden shadow-2xs min-h-0">
                   
                   {/* Lower Tabs Header */}
                   <div className="flex items-center gap-1 border-b border-border-warm mb-3 overflow-x-auto shrink-0 scrollbar-none">
