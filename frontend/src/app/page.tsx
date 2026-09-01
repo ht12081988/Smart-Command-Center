@@ -11,12 +11,9 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If not authenticated, redirect to login page
+    // If not authenticated, redirect to login page; otherwise redirect to Live Feed tab
     if (!user) {
       router.push("/login");
-    } else if (user.role === "Administrator") {
-      // Admins go to the user management console
-      router.push("/admin/users");
     } else {
       router.push("/executive/ingestion");
     }

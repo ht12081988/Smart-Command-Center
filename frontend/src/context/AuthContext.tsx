@@ -124,12 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(sessionData);
       localStorage.setItem("scc_session", JSON.stringify(sessionData));
       
-      // Route based on role default dashboard
-      if (userMatch.role === "Administrator") {
-        router.push("/admin/users");
-      } else {
-        router.push("/executive/ingestion");
-      }
+      // Route based on role default dashboard (Live Feed tab)
+      router.push("/executive/ingestion");
       return true;
     }
     return false;
