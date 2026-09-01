@@ -59,7 +59,7 @@ export default function HostStudioPage() {
               }`}>
                 {activeSource === "HotLine" && "📞 Active HotLine"}
                 {activeSource === "YouTubeLive" && "🔴 YouTube Live"}
-                {activeSource === "LiveTV" && "📺 Live TV Ingestion"}
+                {activeSource === "LiveTV" && "📺 Live TV Feed"}
                 {activeSource === "RadioAoIP" && "📻 Radio AoIP Stream"}
               </span>
               {isLive && (

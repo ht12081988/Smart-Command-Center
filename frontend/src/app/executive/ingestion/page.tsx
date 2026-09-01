@@ -29,9 +29,9 @@ interface StreamSession {
 const MOCK_STREAMS: StreamSession[] = [
   {
     id: "stream-1",
-    title: "Direct Line Show - Broadcast Feed Ingest",
+    title: "Direct Line Show - Broadcast Feed",
     date: "Today",
-    time: "Live Ingest Active",
+    time: "Live Feed Active",
     source: "YouTubeLive",
     status: "Live",
     summary: [
@@ -42,7 +42,7 @@ const MOCK_STREAMS: StreamSession[] = [
   },
   {
     id: "stream-3",
-    title: "Sharjah TV Special Assembly Ingestion Feed",
+    title: "Sharjah TV Special Assembly Feed",
     date: "Sept 02, 2026",
     time: "10:00 AM",
     source: "LiveTV",
@@ -117,20 +117,20 @@ function IngestionSandboxContent() {
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-8">
           
-          {/* SECTION 1: LIVE INGESTION FEEDS */}
+          {/* SECTION 1: LIVE FEEDS */}
           <div>
             <div className="flex items-center justify-between mb-4 border-b border-border-warm pb-2">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-widest">
-                  🔴 Live Now & Active Ingestion Feeds
+                  🔴 Live Now & Active Feeds
                 </h3>
               </div>
               <span className="text-[10px] font-bold text-gold uppercase tracking-widest bg-gold/10 border border-gold/20 px-3 py-1 rounded-full flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Scheduled Ingestion: {formattedSched.dateStr} • {formattedSched.timeStr}
+                Scheduled Feed: {formattedSched.dateStr} • {formattedSched.timeStr}
               </span>
             </div>
             

@@ -306,7 +306,7 @@ function ProducerStudioPageContent() {
       <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
         <PortalHeader
           title="Live Studio Control Desk"
-          subtitle="Manage ingest feeds, monitor live transcripts, and coordinate the screener queue."
+          subtitle="Manage live feeds, monitor live transcripts, and coordinate the screener queue."
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
@@ -321,10 +321,10 @@ function ProducerStudioPageContent() {
                 "bg-blue-50 text-blue-700 border border-blue-200"
               }`}>
                 {!isLive && "○ System Standby (Offline)"}
-                {isLive && activeSource === "HotLine" && "📞 Ingest: Active Hotline"}
-                {isLive && activeSource === "YouTubeLive" && "🔴 Ingest: YouTube Live Feed"}
-                {isLive && activeSource === "LiveTV" && "📺 Ingest: Television Matrix"}
-                {isLive && activeSource === "RadioAoIP" && "📻 Ingest: Radio AoIP Stream"}
+                {isLive && activeSource === "HotLine" && "📞 Feed: Active Hotline"}
+                {isLive && activeSource === "YouTubeLive" && "🔴 Feed: YouTube Live Feed"}
+                {isLive && activeSource === "LiveTV" && "📺 Feed: Television Matrix"}
+                {isLive && activeSource === "RadioAoIP" && "📻 Feed: Radio AoIP Stream"}
               </span>
 
               {isLive && activeSource !== "YouTubeLive" && (
@@ -416,7 +416,7 @@ function ProducerStudioPageContent() {
               </span>
 
               <h2 className="text-xl font-black text-foreground uppercase tracking-tight mb-2">
-                No Ingest Feed Connected
+                No Live Feed Connected
               </h2>
 
               <p className="text-xs text-foreground/60 leading-relaxed mb-6 max-w-sm">
@@ -468,7 +468,7 @@ function ProducerStudioPageContent() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
                     <h3 className="text-xs font-bold text-foreground uppercase tracking-widest">
-                      📞 Active Screener Queue & Hotline Ingest
+                      📞 Active Screener Queue & Hotline
                     </h3>
                   </div>
                   <span className="bg-gold/15 text-gold border border-gold/30 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
@@ -991,7 +991,7 @@ function ProducerStudioPageContent() {
             <form onSubmit={handleEstablishConnection} className="flex flex-col gap-6">
               <header className="border-b border-border-warm pb-3">
                 <h3 className="text-base font-bold text-foreground uppercase tracking-tight">
-                  Configure Live Ingestion Feed
+                  Configure Live Feed
                 </h3>
                 <p className="text-xs text-foreground/50 uppercase tracking-wider mt-0.5">
                   Establish feed routing to the transcription engine
@@ -1003,14 +1003,14 @@ function ProducerStudioPageContent() {
                 {/* Source Ingestion Protocol Dropdown */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-foreground/70 uppercase tracking-wide">
-                    Ingestion Source Protocol
+                    Source Feed Protocol
                   </label>
                   <select
                     value={tempSource}
                     onChange={(e) => handleTempSourceChange(e.target.value as BroadcastSource)}
                     className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors font-semibold uppercase tracking-wider"
                   >
-                    <option value="YouTubeLive">🔴 YouTube Live API Ingest</option>
+                    <option value="YouTubeLive">🔴 YouTube Live API Feed</option>
                     <option value="LiveTV">📺 Live TV RTMP/HLS Encoder</option>
                     <option value="RadioAoIP">📻 AES67 / Dante Studio Sub-mix</option>
                     <option value="HotLine">📞 Active Hotline Connection</option>
@@ -1020,7 +1020,7 @@ function ProducerStudioPageContent() {
                 {/* Ingestion Stream URL */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-foreground/70 uppercase tracking-wide">
-                    Feed Ingest URL / Port Address
+                    Feed URL / Port Address
                   </label>
                   <input
                     type="text"
@@ -1091,7 +1091,7 @@ function ProducerStudioPageContent() {
                   type="submit"
                   className="px-4 py-2.5 rounded-xl bg-gold hover:bg-gold-hover text-white font-semibold text-xs uppercase tracking-wider transition-colors shadow-sm"
                 >
-                  Establish Ingestion
+                  Schedule & Establish Feed
                 </button>
               </div>
             </form>
@@ -1106,7 +1106,7 @@ function ProducerStudioPageContent() {
             <form onSubmit={handleApproveCase} className="flex flex-col gap-6">
               <header className="border-b border-border-warm pb-3">
                 <h3 className="text-base font-bold text-foreground uppercase tracking-tight">
-                  Review Case Ingestion Draft
+                  Review Case Draft
                 </h3>
                 <p className="text-xs text-foreground/50 uppercase tracking-wider mt-0.5">
                   Verify details before routing case to operations
@@ -1129,7 +1129,7 @@ function ProducerStudioPageContent() {
                         <span>👑 Royal Verbal Directive Text</span>
                       </span>
                       <span className="text-[9px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                        Live Ingest Feed
+                        Live Feed
                       </span>
                     </div>
                     <p className="text-xs text-foreground/90 italic font-medium leading-relaxed bg-background/80 p-2.5 rounded-lg border border-amber-500/20">
