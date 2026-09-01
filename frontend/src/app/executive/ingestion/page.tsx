@@ -211,7 +211,7 @@ function IngestionSandboxContent() {
                           : "bg-foreground text-background hover:bg-gold hover:text-white"
                       }`}
                     >
-                      {stream.source === "YouTubeLive" ? "🔌 Schedule a Feed" : "📞 Screen Active Hotline Queue"}
+                      {stream.source === "YouTubeLive" ? "🔌 View Feed" : "📞 Screen Active Hotline Queue"}
                     </Link>
                   </div>
                 </div>
