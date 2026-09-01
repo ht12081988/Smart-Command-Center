@@ -24,6 +24,8 @@ function ProducerStudioPageContent() {
   const {
     activeSource,
     switchSource,
+    scheduleDateTime,
+    setScheduleDateTime,
     callerQueue,
     activeCaller,
     removeFromQueue,
@@ -386,7 +388,7 @@ function ProducerStudioPageContent() {
                   onClick={handleOpenConfigClick}
                   className="bg-gold hover:bg-gold-hover text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap cursor-pointer"
                 >
-                  Connect Ingest Feed
+                  Schedule a Feed
                 </button>
               ) : (
                 <button
@@ -418,7 +420,7 @@ function ProducerStudioPageContent() {
               </h2>
 
               <p className="text-xs text-foreground/60 leading-relaxed mb-6 max-w-sm">
-                No active broadcast or hotline feed is currently ingested. Connect an ingest feed to enable real-time STT transcription, caller queue management, and AI directive extraction.
+                No active broadcast or hotline feed is currently ingested. Schedule a feed to enable real-time STT transcription, caller queue management, and AI directive extraction.
               </p>
 
               <button
@@ -428,7 +430,7 @@ function ProducerStudioPageContent() {
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                Connect Ingest Feed
+                Schedule a Feed
               </button>
             </div>
           </main>
@@ -1026,6 +1028,21 @@ function ProducerStudioPageContent() {
                     value={streamUrl}
                     onChange={(e) => setStreamUrl(e.target.value)}
                     className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors"
+                  />
+                </div>
+
+                {/* Schedule Date & Time */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-foreground/70 uppercase tracking-wide flex items-center justify-between">
+                    <span>Schedule Date & Time *</span>
+                    <span className="text-[9px] font-bold text-gold uppercase tracking-widest">Live Feed Sync</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={scheduleDateTime}
+                    onChange={(e) => setScheduleDateTime(e.target.value)}
+                    className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors font-medium"
                   />
                 </div>
 

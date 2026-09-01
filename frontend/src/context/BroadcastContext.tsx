@@ -54,6 +54,8 @@ export interface ChecklistItem {
 interface BroadcastContextType {
   activeSource: BroadcastSource;
   switchSource: (source: BroadcastSource) => void;
+  scheduleDateTime: string;
+  setScheduleDateTime: (dateTime: string) => void;
   callerQueue: ScreenerTicket[];
   activeCaller: ScreenerTicket | null;
   addCallerToQueue: (ticket: Omit<ScreenerTicket, "id">) => void;
@@ -157,6 +159,7 @@ const MOCK_YT_COMMENTS = [
 
 export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeSource, setActiveSource] = useState<BroadcastSource>("YouTubeLive");
+  const [scheduleDateTime, setScheduleDateTime] = useState<string>("2026-09-01T15:30");
   const [callerQueue, setCallerQueue] = useState<ScreenerTicket[]>([
     {
       id: "caller-mock-1",
@@ -449,6 +452,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         activeSource,
         switchSource,
+        scheduleDateTime,
+        setScheduleDateTime,
         callerQueue,
         activeCaller,
         addCallerToQueue,
