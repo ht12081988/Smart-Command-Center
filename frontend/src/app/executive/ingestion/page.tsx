@@ -83,7 +83,7 @@ function formatScheduleDisplay(isoStr: string) {
 
 function IngestionSandboxContent() {
   const [streams] = useState<StreamSession[]>(MOCK_STREAMS);
-  const { scheduleDateTime } = useBroadcast();
+  const { scheduleDateTime, feedTitle } = useBroadcast();
 
   const liveStreams = streams.filter(s => s.status === "Live");
   const upcomingStreams = streams.filter(s => s.status === "Upcoming");
@@ -182,7 +182,7 @@ function IngestionSandboxContent() {
                         <span className="text-red-500 font-bold">{stream.time}</span>
                       </div>
                       <h4 className="font-bold text-primary-text-gold text-sm group-hover:text-gold transition-colors line-clamp-2 uppercase tracking-tight">
-                        {stream.title}
+                        {stream.source === "YouTubeLive" && feedTitle ? feedTitle : stream.title}
                       </h4>
 
                       {/* Scheduled Feed Time Callout */}

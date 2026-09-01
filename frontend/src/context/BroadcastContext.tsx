@@ -56,6 +56,8 @@ interface BroadcastContextType {
   switchSource: (source: BroadcastSource) => void;
   scheduleDateTime: string;
   setScheduleDateTime: (dateTime: string) => void;
+  feedTitle: string;
+  setFeedTitle: (title: string) => void;
   callerQueue: ScreenerTicket[];
   activeCaller: ScreenerTicket | null;
   addCallerToQueue: (ticket: Omit<ScreenerTicket, "id">) => void;
@@ -160,6 +162,7 @@ const MOCK_YT_COMMENTS = [
 export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeSource, setActiveSource] = useState<BroadcastSource>("YouTubeLive");
   const [scheduleDateTime, setScheduleDateTime] = useState<string>("2026-09-01T15:30");
+  const [feedTitle, setFeedTitle] = useState<string>("Sharjah TV Live Stream Feed");
   const [callerQueue, setCallerQueue] = useState<ScreenerTicket[]>([
     {
       id: "caller-mock-1",
@@ -454,6 +457,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         switchSource,
         scheduleDateTime,
         setScheduleDateTime,
+        feedTitle,
+        setFeedTitle,
         callerQueue,
         activeCaller,
         addCallerToQueue,

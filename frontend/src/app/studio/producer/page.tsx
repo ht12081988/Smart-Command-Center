@@ -26,6 +26,8 @@ function ProducerStudioPageContent() {
     switchSource,
     scheduleDateTime,
     setScheduleDateTime,
+    feedTitle,
+    setFeedTitle,
     callerQueue,
     activeCaller,
     removeFromQueue,
@@ -240,6 +242,7 @@ function ProducerStudioPageContent() {
   const handleEstablishConnection = (e: React.FormEvent) => {
     e.preventDefault();
     setIsConfigDrawerOpen(false);
+    setFeedTitle(ingestChannel);
     switchSource(tempSource);
     setUpperPanelTab("transcript");
     if (tempSource !== "HotLine") {
@@ -321,10 +324,10 @@ function ProducerStudioPageContent() {
                 "bg-blue-50 text-blue-700 border border-blue-200"
               }`}>
                 {!isLive && "○ System Standby (Offline)"}
-                {isLive && activeSource === "HotLine" && "📞 Feed: Active Hotline"}
-                {isLive && activeSource === "YouTubeLive" && "🔴 Feed: YouTube Live Feed"}
-                {isLive && activeSource === "LiveTV" && "📺 Feed: Television Matrix"}
-                {isLive && activeSource === "RadioAoIP" && "📻 Feed: Radio AoIP Stream"}
+                {isLive && activeSource === "HotLine" && `📞 Feed: ${feedTitle || ingestChannel || "Active Hotline"}`}
+                {isLive && activeSource === "YouTubeLive" && `🔴 Feed: ${feedTitle || ingestChannel || "Sharjah TV Live Stream Feed"}`}
+                {isLive && activeSource === "LiveTV" && `📺 Feed: ${feedTitle || ingestChannel || "Television Matrix"}`}
+                {isLive && activeSource === "RadioAoIP" && `📻 Feed: ${feedTitle || ingestChannel || "Radio AoIP Stream"}`}
               </span>
 
               {isLive && activeSource !== "YouTubeLive" && (
@@ -1046,10 +1049,10 @@ function ProducerStudioPageContent() {
                   />
                 </div>
 
-                {/* Target Channel Identifier */}
+                {/* Feed Title */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-foreground/70 uppercase tracking-wide">
-                    Target Broadcast Channel Identifier
+                    Feed Title
                   </label>
                   <input
                     type="text"
@@ -1060,23 +1063,7 @@ function ProducerStudioPageContent() {
                   />
                 </div>
 
-                {/* Compliance Rules Profile */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-foreground/70 uppercase tracking-wide">
-                    Directives Compliance Rules Profile
-                  </label>
-                  <select
-                    value={complianceProfile}
-                    onChange={(e) => setComplianceProfile(e.target.value)}
-                    className="px-3 py-2.5 rounded-xl border border-border-warm bg-background text-foreground text-sm focus:outline-none focus:border-gold transition-colors"
-                  >
-                    {COMPLIANCE_PROFILES.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
                 </div>
-
-              </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 border-t border-border-warm pt-4 mt-4">
